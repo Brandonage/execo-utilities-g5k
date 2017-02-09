@@ -1,0 +1,7 @@
+<configuration>
+  <property>
+    <name>fs.default.name</name>
+    <value>hdfs://@namenode@:54310</value>
+    <description>Namenode</description>
+  </property>
+</configuration>

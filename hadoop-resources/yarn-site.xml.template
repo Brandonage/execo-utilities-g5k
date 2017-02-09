@@ -1,0 +1,39 @@
+<configuration>
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>@jobtracker@</value>
+    <description>resource manager node</description>
+  </property>
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle,spark_shuffle</value>
+    <description>shuffle implementation, ,spark_shuffle for dynamic allocation</description>
+  </property>
+  <property>
+    <name>yarn.log-aggregation-enable</name>
+    <value>true</value>
+    <description>log aggregation</description>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>@nodemanagermemory@</value>
+    <description>memory in the node for YARN, default: 8192</description>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>512</value>
+    <description>number of virtual cores in each node in YARN, default:8</description>
+  </property>
+    <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>12288</value>
+    <description>maximum allocation for a container, default: 8192</description>
+  </property>
+  <property>
+    <name>yarn.nodemanager.aux-services.spark_shuffle.class</name>
+    <value>org.apache.spark.network.yarn.YarnShuffleService</value>
+    <description>enable the class for dynamic allocation</description>
+  </property>
+</configuration>
+
+
