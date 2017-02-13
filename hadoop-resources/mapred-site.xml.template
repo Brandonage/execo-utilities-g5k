@@ -1,0 +1,9 @@
+<configuration>
+
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+    <description>execution framework</description>
+  </property>
+
+</configuration>

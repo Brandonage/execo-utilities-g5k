@@ -43,15 +43,12 @@ def reserve_nodes(frontend,resources,walltime,date,experiment_name): ## {fronten
 def deploy_nodes(frontend,jobid):
     nodes = []
     wait_oar_job_start(jobid,frontend)
-    nodes = get_oar_job_nodes(jobid,site)
+    nodes = get_oar_job_nodes(jobid,frontend)
     deployed, undeployed = deploy(Deployment(nodes, env_name = "wheezy-x64-nfs"),num_tries=3)
     return deployed,undeployed
 
-### (nodes: An iterable of )
-def install_hdfs(nodes,nDatanodes,nNodemanagers,colocated): ##TODO Logic to choose what to choose as datanodes and what as nodemanagers
-
-    pass
-
+def clear_reservation(frontend,jobid):
+    oardel([(jobid, frontend)])
 
 
 
