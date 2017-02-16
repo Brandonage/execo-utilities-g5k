@@ -11,6 +11,7 @@ from pandas import DataFrame
 
 bytes_in_gigabyte = 1073741824 ## The number of bytes in one gigabyte
 bytes_in_megabyte = 1048576
+wget_destination = "/opt" ## This is where we are going to untar all the wget files
 
 ## (node_dict : Dict with the JSON of querying the Grid5k API, resource: String, the name of the resource)
 ## RETURNS: A representation in int,boolean or unique values of that resource for the node
@@ -94,7 +95,11 @@ def update_apt(nodes): ## update apt
 def install_JDK_7(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-7-jre -y openjdk-7-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
 
+def install_dstat(nodes):
+    Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y dstat",hosts=nodes,connection_params={'user': 'root'}).run()
 
+def kill_all_processes(name,nodes):
+    Remote("pkill -f {0}".format(name),hosts=nodes,connection_params={'user': 'root'}).run()
 
 
 

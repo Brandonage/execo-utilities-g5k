@@ -1,6 +1,8 @@
 ##### CLASS USED TO CREATE EXPERIMENTS
 import submission_util
 import general_util
+from glob import glob
+from os import remove
 
 class Experiment:
     jobid = 0  ## The jobid that is linked to this experiment
@@ -32,6 +34,11 @@ class Experiment:
     def install(self):
         pass
 
+    def describe_cluster(self):
+        print self.nodesDF
+
     def clean_job(self):
         submission_util.clear_reservation(self.frontend,self.jobid)
+        [remove(f) for f in glob('hadoop-resources/tmp/*')]
+
 

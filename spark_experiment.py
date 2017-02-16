@@ -1,5 +1,7 @@
 import hadoop_util
-import general_util
+import spark_util
+import monitoring_util
+import mongodb_util
 from experiment import *
 ###TODO TO BE INCLUDED IN A SEPARATE MODULE WITH ALL THE TYPES OF EXPERIMENTS WE CAN HAVE. A FACTORY OF EXPERIMENTS WILL CREATE DIFFERENT TYPES OF EXPERIMENTS E.G (SPARK,FLINK,MAPREDUCE...)
 
@@ -19,9 +21,23 @@ class SparkExperiment(Experiment):
 
     def install(self): ## install all the necessary things for an Spark Experiment
         general_util.update_apt(self.nodes)
-        #general_util.install_JDK_7(self.nodes)
+        general_util.install_JDK_7(self.nodes)
         self.datanodes_list, self.nodemanagers_list, self.masternode = hadoop_util.split_hadoop_roles(self.nodesDF,self.nDatanodes,self.nNodemanagers,self.colocated)
-        hadoop_util.install_hadoop(self.nodesDF,self.masternode,self.os_memory)
+        hadoop_util.install_hadoop(self.nodesDF,self.masternode,self.datanodes_list,self.os_memory)
+        spark_util.install_spark(self.nodesDF,self.nodemanagers_list,self.masternode)
+        hadoop_util.start_hadoop(self.nodesDF,self.masternode,self.nodemanagers_list,self.datanodes_list)
+        general_util.install_dstat(self.nodes)
+        mongodb_util.install_and_run_mongodb(self.masternode)
+        monitoring_util.install_gmone(master=self.masternode, slaves=self.nodemanagers_list)
+        monitoring_util.start_gmone(master=self.masternode,slaves=self.nodemanagers_list)
+
+    def describe_cluster(self):
+        print ("Master node is: " + str(list(self.masternode)))
+        print ("Nodemanagers are: " + str(list(self.nodemanagers_list)))
+        print ("Datanodes are: " + str(list(self.datanodes_list)))
+        print ("All nodes are: " + str(list(self.nodes)))
+        print (self.nodesDF)
+
 
 
 

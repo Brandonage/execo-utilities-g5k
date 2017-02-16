@@ -3,9 +3,6 @@
 ##  TODO MIGRATE EACH RESERVE, DEPLOY AND INSTALL FUNCTIONS TO DIFFERENT FILES
 ##
 ##
-
-
-
 from execo import *
 from execo_g5k import *
 
@@ -38,6 +35,9 @@ def reserve_nodes(frontend,resources,walltime,date,experiment_name): ## {fronten
     [(jobid, site)] = oarsub([
         ( OarSubmission(resources = resources_query,walltime=walltime,job_type="deploy",reservation_date=date,name=experiment_name), frontend)
     ])
+    while not jobid:
+        sleep(3)
+        print "Waiting for resources for experiment: " + experiment_name + " ---> oarsub -l" + resources_query + ",walltime=" + walltime + " -r " + date ##
     return jobid
 
 def deploy_nodes(frontend,jobid):
