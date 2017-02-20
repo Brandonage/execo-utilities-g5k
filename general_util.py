@@ -8,7 +8,7 @@ from execo_g5k import *
 from jsonpath_rw import jsonpath, parse
 from numpy import mean, nan
 from pandas import DataFrame
-
+from custom_output_handler import PyConsoleOutputHandler
 bytes_in_gigabyte = 1073741824 ## The number of bytes in one gigabyte
 bytes_in_megabyte = 1048576
 wget_destination = "/opt" ## This is where we are going to untar all the wget files
@@ -90,7 +90,9 @@ def nodes_with_largest_memory(nodesDF,nNodes):
     return set(nodesDF.sort_values(by="RAM",ascending=False).head(nNodes)["node_name"].tolist())
 
 def update_apt(nodes): ## update apt
-    Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}).run()
+    handler = PyConsoleOutputHandler()
+    Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}
+           , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
 
 def install_JDK_7(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-7-jre -y openjdk-7-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
@@ -99,7 +101,9 @@ def install_dstat(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y dstat",hosts=nodes,connection_params={'user': 'root'}).run()
 
 def kill_all_processes(name,nodes):
-    Remote("pkill -f {0}".format(name),hosts=nodes,connection_params={'user': 'root'}).run()
+    handler = PyConsoleOutputHandler()
+    Remote("pkill -f {0}".format(name),hosts=nodes,connection_params={'user': 'root'}
+           , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
 
 
 

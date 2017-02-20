@@ -7,6 +7,7 @@ from experiment import *
 
 # (frontend: String, resources: dict of resources we want to reserve, walltime : HH:MM:SS, date : when to start experiment,
 # experiment_name : String, datanodes: Int, nodemanager: Int, colocated:boolean, OS_memory : Int )
+## This is in fact a template object that we can copy to create new experiments overriding the run part
 class SparkExperiment(Experiment):
     datanodes_list = None
     nodemanagers_list = None
@@ -30,6 +31,13 @@ class SparkExperiment(Experiment):
         mongodb_util.install_and_run_mongodb(self.masternode)
         monitoring_util.install_gmone(master=self.masternode, slaves=self.nodemanagers_list)
         monitoring_util.start_gmone(master=self.masternode,slaves=self.nodemanagers_list)
+        monitoring_util.install_slim(master=self.masternode)
+        monitoring_util.start_slim(master=self.masternode)
+
+    ## we will override this part to execute the experiments that we want
+    def run(self):
+        pass
+
 
     def describe_cluster(self):
         print ("Master node is: " + str(list(self.masternode)))
