@@ -1,0 +1,241 @@
+*******************************************************************************
+* 
+*  GMonE: A customizable monitoring tool for distributed systems
+*  Copyright (C) 2012 Jesus Montes
+*
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*  
+*******************************************************************************
+
+*******************************************************************************
+* Título : Tutorial de GMonE (GMonE's tutorial in Spanish)
+* Autor  : jmontes
+* Fecha  : 27 octubre 2012
+*******************************************************************************
+
+1. Introducción
+
+Este documento es un breve tutorial de uso de GMonE.
+
+1.1. Requisitos
+
+Para poder ejecutar GMonE es necesario disponer del siguiente software
+instalado :
+
+	  - Java JDK 1.6 o superior.
+	  - Los siguientes ficheros y directorios (incluidos en GMonE-MC):
+        - gmone.jar             Software básico.
+        - lib                   Bibliotecas auxiliares.
+        - gmonedb.sh            Script de arranque de GMonEDB.
+        - gmonemon.sh           Script de arranque de GMonEMon.
+        - manager.conf          Fichero de configuración de GMonEDB.
+        - monitor.conf          Fichero de configuración de GMonEMon.
+        - plugins.list          Lista de plugins para GMonEMon.
+        - jgroups.xml           Fichero de configurtación de la capa de
+                                comunicaciones (JGroups)
+		      	
+1.2. Arquitectura básica de GMonE
+
+GMonE se compone de dos elementos principales:
+
+      - GMonEMon: Proceso encargado de monitorizar cada máquina.
+      - GMonEDB:  Proceso central que se encarga de recopilar la información
+      		      de monitorización.
+				   
+Se debe arrancar un proceso GMonEMon en cada máquina que se desee
+monitorizar. Luego se arranca al menos un GMonEDB central, que se suscribe a
+los GMonEMon correspondientes. GMonEDB recoge los datos de cada máquina y los
+almacena en una base de datos (RRD, SQLite o Cassandra). Además GMonEDB ofrece
+una iterfaz con la que acceder a esos datos mientras en sistema esté
+funcionando.	       
+
+*******************************************************************************
+
+2. GMonEDB
+
+GMonEDB recopila información de monitorización y la almacena en una base
+de datos. Para arrancarlo se emplea el script correspondiente:
+
+    gmonedb.sh <host> <gmonedb config file>
+   
+El parámetro 'host' es el nombre de la máquina donde se ejecuta el
+gestor. El parámetro 'gmonedb config file' indica la ruta del fichero de
+configuración de GMonEDB.
+
+2.1. Formato del fichero de configuración de GMonEDB:
+
+Se trata de un fichero de texto con pares atributo=valor, uno por línea.
+El fichero puede incluir comentarios, en la líneas que empiezan por '#'.
+
+Campos que puede contener el fichero (aquellos marcados con '*' son
+obligatorios):
+
+    - period (*):        El periodo de actualización de la base de datos, en
+	                     segundos.
+	- dbmode (*):        El tipo de base de datos que se va a utilizar. Puede
+	                     tomar los valores 'rrd', 'sqlite' o 'cassandra'.
+	- subscriptions (*): Lista de nombres de máquinas, separadas por comas,
+	                     a las que se suscribe el GMonEDB.
+    - sqlite_file:       Nombre del fichero SQLite que se va a usar como base
+                         de datos. Solo es necesario cuando dbmode=sqlite.
+    - rrd_dir:           Directorio donde se almacenarán los ficheros de RRD.
+                         Solo es necesario cuando dbmode=rrd.
+    - rrd_plot:          Indica si, además de almacenar datos en los ficheros
+                         RRD, se generarán gráficas. Puede tomar los valores
+                         'true' o 'false'. Solo es necesario cuando
+                         dbmode=rrd.
+    - cassandra_host:    Máquina donde se encuentra el servidor de Cassandra.
+                         Solo es necesario cuando dbmode=cassandra.
+    - cassandra_port:    Puerto del servidor de Cassandra. Solo es necesario
+                         cuando dbmode=cassandra.
+                         
+NOTA: En caso de que este fichero de SQLite no exista, se debe crear antes
+ejecutando el script:
+
+    createdb.sh <database file>
+
+IMPORTANTE: El parámetro 'period' controla cada cuanto tiempo se almacena
+nueva información en la base de datos. Solo la información que ya se encuentre
+en ella podrá ser consultada, por lo que es importante ajustar este parámetros
+según las necesidades del sistema.
+
+El fichero manager.conf es un ejemplo de fichero de configuración.
+
+2.2. Arrancando GMonEDB:
+
+$ ./gmonedb.sh bb2.cesvima.upm.es manager.conf 
+[Tue Oct 30 12:58:02 CET 2012] Configurign access to the storage layer...
+[Tue Oct 30 12:58:02 CET 2012] Connecting to jdbc:sqlite:test2.db
+[Tue Oct 30 12:58:03 CET 2012] Creating GMonEAccess...
+[Tue Oct 30 12:58:03 CET 2012] Creating UpdaterTMC...
+[Tue Oct 30 12:58:03 CET 2012] Subscribing to bb18.cesvima.upm.es
+log4j:WARN No appenders could be found for logger (org.jgroups.conf.ClassConfigurator).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+[Tue Oct 30 12:58:06 CET 2012] Creating RMI registry at port 10990...
+[Tue Oct 30 12:58:06 CET 2012] Binding GMonEAccess object...
+[Tue Oct 30 12:58:06 CET 2012] Archive time: 0 ms
+[Tue Oct 30 12:58:06 CET 2012] Waiting 5 seconds...
+[Tue Oct 30 12:58:11 CET 2012] Archive time: 0 ms
+[Tue Oct 30 12:58:11 CET 2012] Waiting 5 seconds...
+...
+
+IMPORTANTE: Este script debe ejecutarse desde un directorio que contenga
+los ficheros 'gmone.jar' y el subdirectorio 'lib'.
+
+*******************************************************************************
+
+3. GMonEMon
+
+GMonEMon monitoriza el nodo en el que está instalado y envía la
+información obtenida al nodo central GMonEDB. Para arrancar GMonEMon
+se emplea el script correspondiente:
+
+   gmonemon.sh <host> <config file>
+   
+Este script recibe dos parámetros. El primero ('host') es el nombre de la
+máquina que se está monitorizando (la propia máquina en la que se ejecuta
+GMonEMon) y el segundo es el fichero de configuración de GMonEMon.
+Ejemplo:
+
+	gmonemon.sh mimaquina.uni.es gmonemon.conf
+	
+Además, en el mismo directorio desde el que se ejecuta el script debe
+haber un fichero llamado 'plugins.list', indicando la lista de plugins de
+GMonEMon que se desean cargar. En caso de duda se recomienda usar
+la copia de plugins.list que se incluye.
+
+IMPORTANTE: le parámetro 'host' se usa para identificar a la máquina de
+forma única en la base de datos de GMonEDB, por lo que es recomendable
+proporcionar un valor diferente para cada máquina monitorizada.
+
+3.1. El fichero de configuración de GMonEMon
+
+El fichero de configuración de GMonEMon debe seguir el siguiente formato:
+
+    - La primera línea debe contener el periodo de publicación de
+      GMonEMon, en segundos.
+    - Las siguientes líneas deben contener una lista de parámetros que se
+      deseen monitorizar, con el formato 'parámetro:formula de agregación'
+	   
+Ejemplo:
+
+El fichero monitor.conf contiene la siguiente información:
+
+5
+cpu_load1:S/n
+cpu_load5:S/n
+cpu_usage:S/n
+mem_total:S/n
+mem_free:S/n
+mem_usage:S/n
+
+Esto significa que, cada 5 segundos, GMonEMon enviará información de
+monitorización a los GMonEDB que se hayan suscrito. Los parámetros
+monitorizados serán 'cpu_load1', 'cpu_load5', 'cpu_usage', 'mem_total',
+'mem_free' y 'mem_usage' y la fórmula de agregación 'S/n' (media aritmética)
+en todos los casos.
+
+3.2. Arrancando GMonEMon
+
+Antes de arrancar GMonEMon se debe verificar que se dispone de lo
+siguiente:
+
+    - El fichero 'plugins.list' se encuentra en el directorio desde el que
+	  se va a arrancar el programa.
+	- Se dispone de un fichero de configuración correctamente contruido.
+	  
+Ejemplo de arranque:
+
+$ ./gmonemon.sh bb18.cesvima.upm.es monitor.conf 
+[Tue Oct 30 13:02:32 CET 2012] Starting GMonEMon...
+[Tue Oct 30 13:02:32 CET 2012] Plugin gmonemon.plugin.TestPlugin loaded
+[Tue Oct 30 13:02:32 CET 2012] ...GMonEMon running
+[Tue Oct 30 13:02:32 CET 2012] Staring publisher...
+[Tue Oct 30 13:02:32 CET 2012] Creating channel...
+log4j:WARN No appenders could be found for logger (org.jgroups.conf.ClassConfigurator).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+[Tue Oct 30 13:02:35 CET 2012] Publishing parameters...
+[Tue Oct 30 13:02:35 CET 2012] Monitor time: 10 ms
+[Tue Oct 30 13:02:35 CET 2012] Publish time: 0 ms
+[Tue Oct 30 13:02:35 CET 2012] Waiting 5 seconds...
+[Tue Oct 30 13:02:40 CET 2012] Publishing parameters...
+[Tue Oct 30 13:02:40 CET 2012] Monitor time: 1 ms
+[Tue Oct 30 13:02:40 CET 2012] Publish time: 1 ms
+[Tue Oct 30 13:02:40 CET 2012] Waiting 5 seconds...
+...
+
+IMPORTANTE: Este script debe ejecutarse desde un directorio que contenga
+el fichero 'gmone.jar'. Además GMonEDB debe haber sido arrancado previamente
+en su nodo.
+
+*******************************************************************************
+
+4. Accediendo a los datos monitorizados
+
+Para acceder a los datos de monitorización, GMonEDB proporciona una interfaz
+RMI basada en la clase 'common.GMonEAccessInterface', que se puede ver en el
+código fuente adjunto. Un ejemplo sencillo de uso de esta interfaz se incluye
+en la clase SampleClient, que se puede ejecutar con el siguiente mandato:
+
+   java -cp gmone.jar SampleClient <host de GMonEDB> <tiempo t>
+   
+El cliente obtiene los datos de monitorización globales almacenados en el
+nodo de GMonEDB en los úlitmos 't' minutos.
+
+El código fuente del cliente se puede ver en 'src/SampleClient.java' y
+la interfaz en 'less src/common/GMonEAccessInterface.java'
+
+*******************************************************************************

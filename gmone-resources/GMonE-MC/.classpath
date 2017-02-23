@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/dypap.jar"/>
+	<classpathentry kind="lib" path="lib/jgroups-3.0.10.Final.jar"/>
+	<classpathentry kind="lib" path="lib/sqlitejdbc-v054.jar"/>
+	<classpathentry kind="lib" path="lib/apache-cassandra-1.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/apache-cassandra-clientutil-1.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/apache-cassandra-thrift-1.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/libthrift-0.7.0.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.6.1.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.6.1.jar"/>
+	<classpathentry kind="lib" path="lib/rrd4j-2.1.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

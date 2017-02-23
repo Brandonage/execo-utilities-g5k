@@ -1,0 +1,19 @@
+
+<!--
+  Default stack using IP multicasting. It is similar to the "udp"
+  stack in stacks.xml, but doesn't use streaming state transfer and flushing
+  author: Bela Ban
+-->
+
+<config xmlns="urn:org:jgroups"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/JGroups-3.0.xsd">
+    <UDP bind_addr="GLOBAL"/>
+    <!--
+    <UDP bind_addr="GLOBAL"
+	 receive_on_all_interfaces="true"/>
+    -->
+    <PING timeout="2000"
+	  num_initial_members="3"/>
+    <VERIFY_SUSPECT timeout="1500"/>
+</config>
