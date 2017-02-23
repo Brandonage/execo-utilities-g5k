@@ -69,7 +69,7 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
     Put(hosts=all_hosts,local_files=[path_core_site_tmp],remote_location=hadoop_conf + "/core-site.xml",connection_params={'user': 'root'}).run() ## we upload core_site.xml to all hosts
     ## YARN_SITE.XML
     for host in all_hosts:
-        nm_memory = nodesDF.loc[nodesDF["node_name"]==host].RAM.values[0] - osMemory
+        nm_memory = (nodesDF.loc[nodesDF["node_name"]==host].RAM.values[0] - osMemory) * 1024 # multiply by 1024 .in nodesDF the RAM is in gigabytes
         replace_infile(pathin=path_yarn_site_template,pathout=path_yarn_site_tmp + host,replacements={"@jobtracker@":list(masternode)[0],"@nodemanagermemory@":str(nm_memory)})
     Put(hosts=all_hosts,local_files=[path_yarn_site_tmp + "{{{host}}}"],remote_location=hadoop_conf + "/yarn-site.xml",connection_params={'user': 'root'}).run()
     ## MAP_RED.XML
@@ -82,13 +82,20 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
 def start_hadoop(nodesDF,masternode,nodemanagers,datanodes):
     all_hosts = nodesDF.node_name.tolist()
     hadoop_sbin = "/opt/hadoop/sbin"
-    hadoop_bin = "/opt/hadoop/bin"
+    hadoop_bin = "/opt/hadoop/bin" ## This should be internal variables of the hadoop_util
     Remote("{0}/hadoop namenode -format".format(hadoop_bin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
     Remote("{0}/hadoop-daemon.sh --script hdfs start namenode".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
     Remote("{0}/yarn-daemon.sh start resourcemanager".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    #Remote("{0}/mr-jobhistory-daemon.sh start historyserver".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run() Do we really have to run this?
+    Remote("{0}/mr-jobhistory-daemon.sh start historyserver".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
     Remote("{0}/yarn-daemon.sh start nodemanager".format(hadoop_sbin),hosts=nodemanagers,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
     Remote("{0}/hadoop-daemon.sh --script hdfs start datanode".format(hadoop_sbin),hosts=datanodes,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+
+def delete_hadoop(path,masternode):
+    Remote("/opt/hadoop/bin/hdfs dfs -rm -r {0}".format(path),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+
+def create_hadoop_directory(path,masternode):
+    Remote("/opt/hadoop/bin/hdfs dfs -mkdir {0}".format(path),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+
 
 
 
