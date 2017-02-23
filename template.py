@@ -3,13 +3,12 @@
 import sys
 #   we add the paths in the frontend to be able to import SparkBench and the Experiment classes
 ## TODO: Install it in PYTHON environment variable so you can import directly.
-sys.path.extend(["/home/abrandon/execo_g5k_benchmarks/spark"])
-sys.path.extend(["/home/abrandon/execo_utilities_g5k"])
+sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/spark"])
+sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
 from sparkbench import SparkBench
 from spark_experiment import *
 
 class SparkExperimentTestBenchmark(SparkExperiment):
-
     def run(self):
         sb = SparkBench(home_directory="/home/abrandon/spark-bench/", master_node=spark_experiment.masternode,
                     resource_manager="yarn",root_to_spark_submit="/opt/spark/bin/spark-submit",default_master="yarn")

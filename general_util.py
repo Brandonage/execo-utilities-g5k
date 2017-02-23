@@ -90,9 +90,10 @@ def nodes_with_largest_memory(nodesDF,nNodes):
     return set(nodesDF.sort_values(by="RAM",ascending=False).head(nNodes)["node_name"].tolist())
 
 def update_apt(nodes): ## update apt
-    handler = PyConsoleOutputHandler()
-    Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}
-           , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
+    Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}).run()
+    # We could print how the update is going by creating a handler handler = PyConsoleOutputHandler()
+    # Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}
+    #       , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
 
 def install_JDK_7(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-7-jre -y openjdk-7-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
