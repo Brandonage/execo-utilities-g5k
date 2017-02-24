@@ -21,7 +21,7 @@ class SparkExperimentTestBenchmark(SparkExperiment):
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
     dict = {"cluster":[("graphene",9)]}
-    walltime = "4:25:00"
+    walltime = "1:25:00"
     date=None
     experiment_name="spark_benchmark_test"
     frontend="nancy"

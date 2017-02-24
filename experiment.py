@@ -54,7 +54,6 @@ class Experiment:
         with open("{0}/description.txt".format(self.results_directory), "w") as text_file:
             text_file.write("Description of the experiment: {0}".format(self.description))
 
-
     def clean_job(self):
         submission_util.clear_reservation(self.frontend,self.jobid)
         [remove(f) for f in glob('hadoop-resources/tmp/*')]

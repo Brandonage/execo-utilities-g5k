@@ -24,7 +24,10 @@ class SparkExperiment(Experiment):
         self.colocated = colocated
         self.os_memory = os_memory
 
+
     def install(self):  ## install all the necessary things for an Spark Experiment
+        # before starting the installation process, let's check if the deployed nodes are sufficient for the specified roles
+        hadoop_util.validate_cluster_parameters(self.nodes,self.ndatanodes,self.nnodemanagers,self.colocated)
         # prepare the JDK
         general_util.update_apt(self.nodes)
         general_util.install_JDK_7(self.nodes)

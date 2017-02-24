@@ -5,7 +5,7 @@
 ##
 from execo import *
 from execo_g5k import *
-from jsonpath_rw import jsonpath, parse
+from jsonpath_rw import parse
 from numpy import mean, nan
 from pandas import DataFrame
 from custom_output_handler import PyConsoleOutputHandler
