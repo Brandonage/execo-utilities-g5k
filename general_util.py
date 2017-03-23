@@ -34,22 +34,24 @@ def get_resource(node_dict,resource):
     }
     jsonpath_expr = parse(parse_dict.get(resource))
     list_of_results = [match for match in jsonpath_expr.find(node_dict)]## Get a list of data from the JSON that matches that pattern
-    ##Different resources will have different semantics for their values. We get them through the following if statements
-    if (resource in ["power_available","node_flops","CPU description","GPU","cores"]):##if the resource has a unique value
-        return list_of_results[0].value ##return the single value
-    if (resource=="PDU"):
-        values = [res.value for res in list_of_results ] ## get the values of the list of one element
-        return ' and '.join(values) ## We want a string with the different PDU's
-    if (resource in ["SSD","HDD"]):
-        values = [res.value for res in list_of_results if res.value==resource ] ## We get a list with the different types of storage that node has (e.g. SSD, HDD)
-        capacity = [res.context.value.get("size") for res in list_of_results if res.value==resource] ## We get a list with the size of storage for each disk of that type
-        if values: ## If we have values
-            return str(values.count(resource)) + " * " + str(int(mean(capacity)/bytes_in_gigabyte)) + " GB"## We want the number of SSD's disk on the node and the mean capacity of this number
-        else: ## If not return empty string
-            return nan
-    if (resource in ["storage_size","RAM"]):
-        values = [res.value for res in list_of_results ]
-        return sum(values)/bytes_in_gigabyte ## We want the sum of all the storage in that node
+    if len(list_of_results)==0:
+        return ""
+    else: ##Different resources will have different semantics for their values. We get them through the following if statements
+        if (resource in ["power_available","node_flops","CPU description","GPU","cores"]):##if the resource has a unique value
+            return list_of_results[0].value ##return the single value
+        if (resource=="PDU"):
+            values = [res.value for res in list_of_results ] ## get the values of the list of one element
+            return ' and '.join(values) ## We want a string with the different PDU's
+        if (resource in ["SSD","HDD"]):
+            values = [res.value for res in list_of_results if res.value==resource ] ## We get a list with the different types of storage that node has (e.g. SSD, HDD)
+            capacity = [res.context.value.get("size") for res in list_of_results if res.value==resource] ## We get a list with the size of storage for each disk of that type
+            if values: ## If we have values
+                return str(values.count(resource)) + " * " + str(int(mean(capacity)/bytes_in_gigabyte)) + " GB"## We want the number of SSD's disk on the node and the mean capacity of this number
+            else: ## If not return empty string
+                return nan
+        if (resource in ["storage_size","RAM"]):
+            values = [res.value for res in list_of_results ]
+            return sum(values)/bytes_in_gigabyte ## We want the sum of all the storage in that node
 
 
 

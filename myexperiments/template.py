@@ -20,14 +20,14 @@ class SparkExperimentTestBenchmark(SparkExperiment):
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = {"cluster":[("graphene",9)]}
-    walltime = "3:25:00"
+    dict = {"cluster":[("granduc",3)]}
+    walltime = "1:25:00"
     date=None
     experiment_name="spark_benchmark_test"
-    frontend="nancy"
+    frontend="luxembourg"
     description="We want to experiment with Mesos and the building a framework with it"
-    spark_experiment = SparkExperimentTestBenchmark("nancy",resources=dict,walltime=walltime,
-                            date=date,experiment_name=experiment_name,description=description,ndatanodes=9,nnodemanagers=8,colocated=True,os_memory=2)
+    spark_experiment = SparkExperimentTestBenchmark(frontend=frontend,resources=dict,walltime=walltime,
+                            date=date,experiment_name=experiment_name,description=description,ndatanodes=3,nnodemanagers=2,colocated=True,os_memory=2)
     # TODO: All of this instructions can be wrapped in a method like .start()
     spark_experiment.reserve_nodes()
     spark_experiment.deploy_nodes()
