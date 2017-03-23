@@ -98,28 +98,28 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
     Put(hosts=all_hosts,local_files=[path_mapred_site_template],remote_location=hadoop_conf + "/mapred-site.xml",
         connection_params={'user': 'root'}).run()
     ### CHANGE THE JAVA_HOME ENVIRONMENTAL VARIABLE FOR HADOOP
-    Remote("perl -pi -e 's,.*JAVA_HOME.*,export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/jre,g' {0}/hadoop-env.sh".format(hadoop_conf),
+    Remote("perl -pi -e 's,.*JAVA_HOME.*,export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre,g' {0}/hadoop-env.sh".format(hadoop_conf),
            hosts=all_hosts,connection_params={'user': 'root'}).run()
     ### WE GIVE PERMISSIONS TO THE G5K USER
-    Remote("chown -R {0}:users /opt/hadoop*".format(g5k_configuration.get("g5k_user")),hosts=all_hosts,
+    Remote("chown -R {0}:users /opt/hadoop*".format(g5k_user),hosts=all_hosts,
            connection_params={'user': 'root'}).run()
 
 def start_hadoop(nodesDF,masternode,nodemanagers,datanodes):
     all_hosts = nodesDF.node_name.tolist()
     hadoop_sbin = "/opt/hadoop/sbin"
     hadoop_bin = "/opt/hadoop/bin" ## This should be internal variables of the hadoop_util
-    Remote("{0}/hadoop namenode -format".format(hadoop_bin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    Remote("{0}/hadoop-daemon.sh --script hdfs start namenode".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    Remote("{0}/yarn-daemon.sh start resourcemanager".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    Remote("{0}/mr-jobhistory-daemon.sh start historyserver".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    Remote("{0}/yarn-daemon.sh start nodemanager".format(hadoop_sbin),hosts=nodemanagers,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
-    Remote("{0}/hadoop-daemon.sh --script hdfs start datanode".format(hadoop_sbin),hosts=datanodes,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+    Remote("{0}/hadoop namenode -format".format(hadoop_bin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    Remote("{0}/hadoop-daemon.sh --script hdfs start namenode".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    Remote("{0}/yarn-daemon.sh start resourcemanager".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    Remote("{0}/mr-jobhistory-daemon.sh start historyserver".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    Remote("{0}/yarn-daemon.sh start nodemanager".format(hadoop_sbin),hosts=nodemanagers,connection_params={'user': g5k_user}).run()
+    Remote("{0}/hadoop-daemon.sh --script hdfs start datanode".format(hadoop_sbin),hosts=datanodes,connection_params={'user': g5k_user}).run()
 
 def delete_hadoop(path,masternode):
-    Remote("/opt/hadoop/bin/hdfs dfs -rm -r {0}".format(path),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+    Remote("/opt/hadoop/bin/hdfs dfs -rm -r {0}".format(path),hosts=masternode,connection_params={'user': g5k_user}).run()
 
 def create_hadoop_directory(path,masternode):
-    Remote("/opt/hadoop/bin/hdfs dfs -mkdir {0}".format(path),hosts=masternode,connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+    Remote("/opt/hadoop/bin/hdfs dfs -mkdir {0}".format(path),hosts=masternode,connection_params={'user': g5k_user}).run()
 
 
 

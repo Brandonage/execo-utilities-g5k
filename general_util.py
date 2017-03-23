@@ -12,6 +12,9 @@ from custom_output_handler import PyConsoleOutputHandler
 bytes_in_gigabyte = 1073741824 ## The number of bytes in one gigabyte
 bytes_in_megabyte = 1048576
 wget_destination = "/opt" ## This is where we are going to untar all the wget files
+g5k_user = g5k_configuration.get("g5k_user")
+handler = PyConsoleOutputHandler() ## we can use this object if we want to track the output and errors of the processes
+output_handler_args = {'stdout_handlers': [handler], 'stderr_handlers': [handler]}
 
 ## (node_dict : Dict with the JSON of querying the Grid5k API, resource: String, the name of the resource)
 ## RETURNS: A representation in int,boolean or unique values of that resource for the node
@@ -91,12 +94,25 @@ def nodes_with_largest_memory(nodesDF,nNodes):
 
 def update_apt(nodes): ## update apt
     Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}).run()
+    #   We add the screen package which is not installed by default
+    Remote("apt-get -y install screen",hosts=nodes,connection_params={'user': 'root'}).run()
+    #   We add lsb-release package since its handy for mesosphere install scripts
+    #   http://serverfault.com/questions/476485/do-some-debian-builds-not-have-lsb-release
+    Remote("apt-get install lsb-release",hosts=nodes,connection_params={'user': 'root'}).run()
     # We could print how the update is going by creating a handler handler = PyConsoleOutputHandler()
     # Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}
     #       , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
 
 def install_JDK_7(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-7-jre -y openjdk-7-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
+
+def install_JDK_8(nodes):
+    #   We need backports with the jessie distribution
+    Remote("apt install -yt jessie-backports  openjdk-8-jre-headless ca-certificates-java",hosts=nodes,connection_params={'user': 'root'}).run()
+    Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-8-jre -y openjdk-8-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
+    #   We need to update the path to the 8 version
+    Remote("update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java",hosts=nodes,connection_params={'user': 'root'}).run()
+
 
 def install_dstat(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y dstat",hosts=nodes,connection_params={'user': 'root'}).run()

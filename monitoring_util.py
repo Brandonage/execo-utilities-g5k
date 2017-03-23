@@ -18,7 +18,7 @@ def install_gmone(master,slaves):
     Put(hosts=master.union(slaves),local_files=["gmone-resources/templates/monitor.conf.template"],remote_location="/opt/GMonE-MC/monitor.conf"
         ,connection_params={'user': 'root'}).run()
     #   change permissions so g5k_user can operate with GMONE
-    Remote("chown -R {0}:users /opt/GMonE-MC".format(g5k_configuration.get("g5k_user")),hosts=master.union(slaves),
+    Remote("chown -R {0}:users /opt/GMonE-MC".format(g5k_user),hosts=master.union(slaves),
            connection_params={'user': 'root'}).run()
 
 def start_gmonedb(master):
@@ -38,12 +38,13 @@ def start_gmone(master,slaves):
 
 def install_slim(master):
     tarball_url = "https://nodejs.org/dist/v4.4.3/node-v4.4.3-linux-x64.tar.xz"
+    Remote("apt-get install -y xz-utils".format(tarball_url,wget_destination),hosts=master,connection_params={'user': 'root'}).run()
     Remote("wget {0} -O {1}/nodejs.tar.xz".format(tarball_url,wget_destination),hosts=master,connection_params={'user': 'root'}).run()
     Remote("cd {0} && tar xf nodejs.tar.xz".format(wget_destination),hosts=master,connection_params={'user': 'root'}).run()
     Remote("cd {0} && mv node-* node".format(wget_destination),hosts=master,connection_params={'user': 'root'}).run()
     Remote("cd {0}/node/bin && ./npm install -g slim.js".format(wget_destination),hosts=master,connection_params={'user': 'root'}).run()
 
 def start_slim(master):
-    Remote("PATH=$PATH:/opt/node/bin nohup slim -p 27017",hosts=master,connection_params={'user':g5k_configuration.get('g5k_user')},process_args={"shell":True}).start()
+    Remote("PATH=$PATH:/opt/node/bin nohup slim -p 27017",hosts=master,connection_params={'user':g5k_user},process_args={"shell":True}).start()
 
 

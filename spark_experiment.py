@@ -5,7 +5,8 @@ import mongodb_util
 from experiment import *
 
 
-###TODO TO BE INCLUDED IN A SEPARATE MODULE WITH ALL THE TYPES OF EXPERIMENTS WE CAN HAVE. A FACTORY OF EXPERIMENTS WILL CREATE DIFFERENT TYPES OF EXPERIMENTS E.G (SPARK,FLINK,MAPREDUCE...)
+###TODO TO BE INCLUDED IN A SEPARATE MODULE WITH ALL THE TYPES OF EXPERIMENTS WE CAN HAVE. A FACTORY OF EXPERIMENTS WILL
+#  CREATE DIFFERENT TYPES OF EXPERIMENTS E.G (SPARK,FLINK,MAPREDUCE...).
 
 # (frontend: String, resources: dict of resources we want to reserve, walltime : HH:MM:SS, date : when to start experiment,
 # experiment_name : String, datanodes: Int, nodemanager: Int, colocated:boolean, OS_memory : Int )
@@ -30,7 +31,7 @@ class SparkExperiment(Experiment):
         hadoop_util.validate_cluster_parameters(self.nodes,self.ndatanodes,self.nnodemanagers,self.colocated)
         # prepare the JDK
         general_util.update_apt(self.nodes)
-        general_util.install_JDK_7(self.nodes)
+        general_util.install_JDK_8(self.nodes)
         # start with the hadoop installation:
         # 1. prepare the roles
         self.datanodes_list, self.nodemanagers_list, self.masternode = hadoop_util.split_hadoop_roles(self.nodesDF,
@@ -39,12 +40,12 @@ class SparkExperiment(Experiment):
                                                                                                       self.colocated)
         # 2. install the files needed
         hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory)
+        # launch hadoop daemons
+        hadoop_util.start_hadoop(self.nodesDF, self.masternode, self.nodemanagers_list, self.datanodes_list)
         # start with spark installation
         spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list)
         spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         spark_util.start_history_server(masternode=self.masternode)
-        # launch hadoop daemons
-        hadoop_util.start_hadoop(self.nodesDF, self.masternode, self.nodemanagers_list, self.datanodes_list)
         mongodb_util.install_and_run_mongodb(self.masternode)
         # install dstat (to be used by GMone)
         general_util.install_dstat(self.nodes)
@@ -89,12 +90,12 @@ class SparkExperiment(Experiment):
 
         :rtype: str
         """
-        str = "Master node is: " + str(list(self.masternode)) + '\n' + "Nodemanagers are: " + str(
+        result = "Master node is: " + str(list(self.masternode)) + '\n' + "Nodemanagers are: " + str(
             list(self.nodemanagers_list)) + '\n' + \
               "Datanodes are: " + str(list(self.datanodes_list)) + '\n' + \
               "All nodes are: " + str(list(self.nodes)) + '\n' + \
               self.nodesDF.to_string()
-        return str
+        return result
 
     def export_slim_metrics(self, directory):
         mongodb_util.export_mongodb(node=self.masternode, database="meteor", collection="apps",
