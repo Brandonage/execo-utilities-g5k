@@ -27,9 +27,6 @@ def install_spark(master,slaves):
         ,connection_params={'user': 'root'}).run()
     Put(hosts=all_hosts,local_files=["spark-resources/spark-env.sh"],remote_location=spark_conf + "/spark-env.sh"
         ,connection_params={'user': 'root'}).run()
-    #  We do some stuff to be able to use spark on mesos
-    #  Put the binary in all the slaves so they have access to the binaries
-    Remote("/opt/hadoop/bin/hdfs dfs -put /opt/spark.tar.gz /".format(wget_destination),hosts=master,connection_params={'user': g5k_user}).run()
     ### CREATE THE SPARK EVENTS DIRECTORY
     Remote("mkdir -p /tmp/spark-events",hosts=all_hosts,connection_params={'user': 'root'}).run()
     Remote("chmod 777 /tmp/spark-events",hosts=all_hosts,connection_params={'user': 'root'}).run()
@@ -37,6 +34,9 @@ def install_spark(master,slaves):
     Remote("chown -R {0}:users /opt/spark*".format(g5k_user),hosts=all_hosts,connection_params={'user': 'root'}).run()
 
 def start_spark(nodesDF,masternode,nodemanagers):
+    #  We do some stuff to be able to use spark on mesos
+    #  Put the binary in all the slaves so they have access to the binaries
+    Remote("/opt/hadoop/bin/hdfs dfs -put /opt/spark.tar.gz /".format(wget_destination),hosts=master,connection_params={'user': g5k_user}).run()
     pass
 
 def start_history_server(masternode):

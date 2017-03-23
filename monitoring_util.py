@@ -2,7 +2,7 @@ from general_util import *
 
 
 def start_dstat(nodes):
-    Remote("nohup dstat -cdngym --proc --io --ipc --socket --net-packets --proc-count --disk-util --rpc --rpcd --vm --output /opt/GMonE-MC/dstat.csv > /dev/null 2>&1",hosts=nodes,connection_params={'user': 'abrandon'}
+    Remote("nohup dstat -cdngym --proc --io --ipc --socket --net-packets --proc-count --disk-util --rpc --rpcd --vm --output /opt/GMonE-MC/dstat.csv > /dev/null 2>&1",hosts=nodes,connection_params={'user': g5k_user}
            ,process_args={"shell":True}).start()
 
 ##Upload the GMone directory in gmone-resources/GMonE-MC to all the nodes
