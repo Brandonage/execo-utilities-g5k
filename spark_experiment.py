@@ -40,11 +40,12 @@ class SparkExperiment(Experiment):
                                                                                                       self.colocated)
         # 2. install the files needed
         hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory)
-        # start with spark installation
+        # start the spark installation
         spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list)
+        # prepare the files for dynamic allocation. This copies spark-*-yarn-shuffle.jar to the share yarn directory
+        spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         # launch hadoop daemons
         hadoop_util.start_hadoop(self.nodesDF, self.masternode, self.nodemanagers_list, self.datanodes_list)
-        spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         spark_util.start_history_server(masternode=self.masternode)
         mongodb_util.install_and_run_mongodb(self.masternode)
         # install dstat (to be used by GMone)

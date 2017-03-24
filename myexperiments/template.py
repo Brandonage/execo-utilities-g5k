@@ -10,7 +10,7 @@ from spark_experiment import *
 
 class SparkExperimentTestBenchmark(SparkExperiment):
     def run(self):
-        sb = SparkBench(home_directory="/home/abrandon/spark-bench/", master_node=spark_experiment.masternode,
+        sb = SparkBench(home_directory="/home/abrandon/execo-g5k-benchmarks/spark/spark-bench/", master_node=spark_experiment.masternode,
                     resource_manager="yarn",root_to_spark_submit="/opt/spark/bin/spark-submit",default_master="yarn")
         sb.create_all_bench_files(prefix="_first",size=10,npartitions=40,conf=[["spark.executor.memory","7g"]])
         sb.launch_all_apps(prefix="_first",conf=[["spark.executor.memory","5g"]])
@@ -20,11 +20,11 @@ class SparkExperimentTestBenchmark(SparkExperiment):
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = {"cluster":[("granduc",3)]}
-    walltime = "1:25:00"
+    dict = {"cluster":[("graphene",3)]}
+    walltime = "2:25:00"
     date=None
     experiment_name="spark_benchmark_test"
-    frontend="luxembourg"
+    frontend="nancy"
     description="We want to experiment with Mesos and the building a framework with it"
     spark_experiment = SparkExperimentTestBenchmark(frontend=frontend,resources=dict,walltime=walltime,
                             date=date,experiment_name=experiment_name,description=description,ndatanodes=3,nnodemanagers=2,colocated=True,os_memory=2)
