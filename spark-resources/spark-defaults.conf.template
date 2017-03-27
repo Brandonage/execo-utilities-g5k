@@ -26,8 +26,6 @@
 # spark.executor.extraJavaOptions  -XX:+PrintGCDetails -Dkey=value -Dnumbers="one two three"
 # spark.executor.extraJavaOptions  -XX:+PrintGCDetails
 # spark.master                     spark://@jobtracker@:7077
-spark.jars.packages             org.hammerlab:spark-json-relay:2.0.0
-spark.extraListeners            org.apache.spark.JsonRelay
 spark.eventLog.enabled           true
 spark.eventLog.dir               /tmp/spark-events
 spark.ui.port                   18080

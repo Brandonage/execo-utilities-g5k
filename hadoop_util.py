@@ -56,7 +56,7 @@ def split_hadoop_roles(nodesDF,nDatanodes,nNodemanagers,colocated):
 ### (nodes: DF with all the nodes in the reservation, datanodes, nodemanagers, master: An iterable with the name of the nodes, osMemory: the ammount of memory we want to leave free for OS)
 def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
     all_hosts = nodesDF.node_name.tolist()
-    tarball_url = "http://www.eu.apache.org/dist/hadoop/common/hadoop-2.6.0/hadoop-2.6.0.tar.gz" ## whatever version we want
+    tarball_url = "http://apache.uvigo.es/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz" ## whatever version we want
     #   {BEGIN}DEFINE THE DIFFERENT LOCAL PATHS
     path_core_site_template = "hadoop-resources/templates/core-site.xml.template"
     path_core_site_tmp = "hadoop-resources/tmp/core-site.xml"
@@ -104,16 +104,17 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
     Remote("chown -R {0}:users /opt/hadoop*".format(g5k_user),hosts=all_hosts,
            connection_params={'user': 'root'}).run()
 
-def start_hadoop(nodesDF,masternode,nodemanagers,datanodes):
-    all_hosts = nodesDF.node_name.tolist()
+def start_hadoop(masternode, nodemanagers, datanodes):
     hadoop_sbin = "/opt/hadoop/sbin"
     hadoop_bin = "/opt/hadoop/bin" ## This should be internal variables of the hadoop_util
     Remote("{0}/hadoop namenode -format".format(hadoop_bin),hosts=masternode,connection_params={'user': g5k_user}).run()
-    Remote("{0}/hadoop-daemon.sh --script hdfs start namenode".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
-    Remote("{0}/yarn-daemon.sh start resourcemanager".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
     Remote("{0}/mr-jobhistory-daemon.sh start historyserver".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
-    Remote("{0}/yarn-daemon.sh start nodemanager".format(hadoop_sbin),hosts=nodemanagers,connection_params={'user': g5k_user}).run()
-    Remote("{0}/hadoop-daemon.sh --script hdfs start datanode".format(hadoop_sbin),hosts=datanodes,connection_params={'user': g5k_user}).run()
+    Remote("{0}/start-dfs.sh".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    Remote("{0}/start-yarn.sh".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    # Remote("{0}/hadoop-daemon.sh --script hdfs start namenode".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    # Remote("{0}/yarn-daemon.sh start resourcemanager".format(hadoop_sbin),hosts=masternode,connection_params={'user': g5k_user}).run()
+    # Remote("{0}/hadoop-daemon.sh --script hdfs start datanode".format(hadoop_sbin),hosts=datanodes,connection_params={'user': g5k_user}).run()
+    # Remote("{0}/yarn-daemon.sh start nodemanager".format(hadoop_sbin),hosts=nodemanagers,connection_params={'user': g5k_user}).run()
 
 def delete_hadoop(path,masternode):
     Remote("/opt/hadoop/bin/hdfs dfs -rm -r {0}".format(path),hosts=masternode,connection_params={'user': g5k_user}).run()
