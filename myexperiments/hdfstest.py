@@ -11,7 +11,7 @@ from hdfs_experiment import HdfsExperiment
 
 class SparkExperimentTestBenchmark(HdfsExperiment):
     def run(self):  ## remember to set the home_directory variable to the sparkbenchmark root directory
-        sb = SparkBench(home_directory="/home/abrandon/spark-bench/", master_node=spark_experiment.masternode,
+        sb = SparkBench(home_directory="/home/abrandon/execo-g5k-benchmarks/spark/spark-bench/", master_node=spark_experiment.masternode,
                     resource_manager="yarn",root_to_spark_submit="/opt/spark/bin/spark-submit",default_master="yarn")
         sb.create_all_bench_files(prefix="_first",size=10,npartitions=40,conf=[["spark.executor.memory","7g"]])
         sb.launch_all_apps(prefix="_first",conf=[["spark.executor.memory","5g"]])
@@ -21,14 +21,14 @@ class SparkExperimentTestBenchmark(HdfsExperiment):
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = {"cluster":[("graphene",3)]}
-    walltime = "2:25:00"
+    dict = {"cluster":[("graphene",4)]}
+    walltime = "3:25:00"
     date=None
     experiment_name="spark_benchmark_2.0_test"
     frontend="nancy"
     description="This is an experiment to test spark-bench against the 2.0.1 version of Spark"
     spark_experiment = SparkExperimentTestBenchmark(frontend=frontend,resources=dict,walltime=walltime,
-                            date=date,experiment_name=experiment_name,description=description,ndatanodes=3,nnodemanagers=2,colocated=True,os_memory=2)
+                            date=date,experiment_name=experiment_name,description=description,ndatanodes=4,nnodemanagers=3,colocated=True,os_memory=2)
     # TODO: All of this instructions can be wrapped in a method like .start()
     spark_experiment.reserve_nodes()
     spark_experiment.deploy_nodes()

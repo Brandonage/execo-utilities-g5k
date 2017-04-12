@@ -54,9 +54,16 @@ def split_hadoop_roles(nodesDF,nDatanodes,nNodemanagers,colocated):
     return datanodes, nodemanagers, master
 
 ### (nodes: DF with all the nodes in the reservation, datanodes, nodemanagers, master: An iterable with the name of the nodes, osMemory: the ammount of memory we want to leave free for OS)
-def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
+def install_hadoop(nodesDF,masternode,nodemanagers,osMemory,source=None):
+    """
+
+    :param nodesDF: the dataframe of nodes
+    :param masternode: a dict with the masternode
+    :param nodemanagers: a dict with the nodemanagers
+    :param osMemory: the ammount of memory that YARN will leave for the OS
+    :param source: the source of the hadoop distribution. If none it will download and untar the last version
+    """
     all_hosts = nodesDF.node_name.tolist()
-    tarball_url = "http://apache.uvigo.es/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz" ## whatever version we want
     #   {BEGIN}DEFINE THE DIFFERENT LOCAL PATHS
     path_core_site_template = "hadoop-resources/templates/core-site.xml.template"
     path_core_site_tmp = "hadoop-resources/tmp/core-site.xml"
@@ -66,11 +73,16 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory):
     #   {END}DEFINE THE DIFFERENT LOCAL PATHS
     hadoop_home = "/opt/hadoop" ## The directory where we are going to install hadoop in g5k
     hadoop_conf = hadoop_home + "/etc/hadoop"
-    Remote("wget {url} -O {destination}/hadoop.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
+    if source==None:
+        tarball_url = "http://apache.uvigo.es/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz" ## whatever version we want
+        Remote("wget {url} -O {destination}/hadoop.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
            hosts=all_hosts,connection_params={'user': 'root'}).run() ## Download the hadoop distribution on it
-    Remote("cd {0} && tar -xvzf hadoop.tar.gz".format(wget_destination),hosts=all_hosts,
+        Remote("cd {0} && tar -xvzf hadoop.tar.gz".format(wget_destination),hosts=all_hosts,
            connection_params={'user': 'root'}).run() ## untar Hadoop
-    Remote("cd {0} && mv hadoop-* hadoop".format(wget_destination),hosts=all_hosts,
+        Remote("cd {0} && mv hadoop-* hadoop".format(wget_destination),hosts=all_hosts,
+           connection_params={'user': 'root'}).run() ## move hadoop to a directory without the version
+    else:
+        Remote("cp -r {0} {1}/hadoop".format(source,wget_destination),hosts=all_hosts,
            connection_params={'user': 'root'}).run() ## move hadoop to a directory without the version
     ## CREATE THE MASTER FILE
     with open("hadoop-resources/tmp/master",'w') as f:

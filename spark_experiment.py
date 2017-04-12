@@ -41,7 +41,7 @@ class SparkExperiment(Experiment):
         # 2. install the files needed
         hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory)
         # start the spark installation
-        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, version="1.6.2",monitor=True)
+        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, monitor=True,source="1.6.2")
         # prepare the files for dynamic allocation. This copies spark-*-yarn-shuffle.jar to the share yarn directory
         spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         # launch hadoop daemons

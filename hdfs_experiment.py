@@ -39,9 +39,9 @@ class HdfsExperiment(Experiment):
                                                                                                       self.nnodemanagers,
                                                                                                       self.colocated)
         # 2. install the files needed
-        hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory)
+        hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory,source="/home/abrandon/hadoop-2.7.3")
         # start the spark installation
-        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, version="2.0.1",monitor=False)
+        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, monitor=False,source="/home/abrandon/spark-2.1.0-bin-custom-spark")
         # prepare the files for dynamic allocation. This copies spark-*-yarn-shuffle.jar to the share yarn directory
         spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         # launch hadoop daemons

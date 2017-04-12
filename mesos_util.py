@@ -13,6 +13,14 @@ def install_mesos_dependecies(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get -y install g++", ## Install c++ compiler
            hosts=nodes,connection_params={'user': 'root'}).run()
 
+def install_mesosphere_dependencies(nodes):
+    install_mesos_dependecies(nodes) ## we also need the ones of mesos
+    Remote("apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF", ## Install c++ compiler
+           hosts=nodes,connection_params={'user': 'root'}).run()
+    Remote("echo deb http://repos.mesosphere.io/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) main | tee /etc/apt/sources.list.d/mesosphere.list",
+           hosts=nodes,connection_params={'user': 'root'}).run()
+    update_apt(nodes)
+
 def build_and_install_mesos(nodes):
     install_mesos_dependecies(nodes)
     Remote("wget {url} -O {destination}/mesos.tar.gz".format(url=tarball_url,destination=wget_destination),

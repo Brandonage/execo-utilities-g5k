@@ -105,6 +105,7 @@ def update_apt(nodes): ## update apt
     # Remote("apt-get -y update",hosts=nodes,connection_params={'user': 'root'}
     #       , process_args={'stdout_handlers': [handler], 'stderr_handlers': [handler]}).run()
 
+
 def install_JDK_7(nodes):
     Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-7-jre -y openjdk-7-jdk",hosts=nodes,connection_params={'user': 'root'}).run()
 

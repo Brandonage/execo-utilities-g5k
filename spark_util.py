@@ -2,7 +2,7 @@ from general_util import *
 
 
 
-def install_spark(master, slaves, version, monitor):
+def install_spark(master, slaves, monitor,source=None):
     """
 
     :param master: the masternode
@@ -11,17 +11,25 @@ def install_spark(master, slaves, version, monitor):
     :param monitor: boolean indicating if we want to monitor with Slim or not
     """
     all_hosts = slaves.union(master)
-    if ("1.6.2"==version):
-        tarball_url = "http://www.eu.apache.org/dist/spark/spark-1.6.2/spark-1.6.2-bin-hadoop2.6.tgz"
-    if ("2.0.1"==version):
-        tarball_url = "http://d3kbcqa49mib13.cloudfront.net/spark-2.0.1-bin-hadoop2.6.tgz"
     spark_home = "/opt/spark" ## The directory where we are going to install hadoop in g5k
     spark_conf = spark_home + "/conf"
-    ## We get, untar and prepare the directory for Spark
-    Remote("wget {url} -O {destination}/spark.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
+    if ("1.6.2"==source):  # TODO: Tidy up this one
+        tarball_url = "http://www.eu.apache.org/dist/spark/spark-1.6.2/spark-1.6.2-bin-hadoop2.6.tgz"
+        ## We get, untar and prepare the directory for Spark
+        Remote("wget {url} -O {destination}/spark.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
            hosts=all_hosts,connection_params={'user': 'root'}).run() ## Download the hadoop distribution on it
-    Remote("cd {0} && tar -xvzf spark.tar.gz".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## untar Spark
-    Remote("cd {0} && mv spark-* spark".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## move Spark to a new directory without the version name
+        Remote("cd {0} && tar -xvzf spark.tar.gz".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## untar Spark
+        Remote("cd {0} && mv spark-* spark".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## move Spark to a new directory without the version name
+    elif ("2.0.1"==source):
+        tarball_url = "http://d3kbcqa49mib13.cloudfront.net/spark-2.0.1-bin-without-hadoop.tgz"
+        ## We get, untar and prepare the directory for Spark
+        Remote("wget {url} -O {destination}/spark.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
+           hosts=all_hosts,connection_params={'user': 'root'}).run() ## Download the hadoop distribution on it
+        Remote("cd {0} && tar -xvzf spark.tar.gz".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## untar Spark
+        Remote("cd {0} && mv spark-* spark".format(wget_destination),hosts=all_hosts,connection_params={'user': 'root'}).run() ## move Spark to a new directory without the version name
+    else:
+        Remote("cp -r {0} {1}/spark".format(source,wget_destination),hosts=all_hosts,
+           connection_params={'user': 'root'}).run() ## move hadoop to a directory without the version
     ## CREATE THE MASTER FILE
     with open("spark-resources/master",'w') as f:
         f.write(list(master)[0] + "\n")
