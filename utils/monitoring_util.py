@@ -1,4 +1,4 @@
-from general_util import *
+from utils.general_util import *
 
 
 def start_dstat(nodes):
@@ -48,3 +48,5 @@ def start_slim(master):
     Remote("PATH=$PATH:/opt/node/bin nohup slim -p 27017",hosts=master,connection_params={'user':g5k_user},process_args={"shell":True}).start()
 
 
+def install_dstat(nodes):
+    Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y dstat",hosts=nodes,connection_params={'user': 'root'}).run()

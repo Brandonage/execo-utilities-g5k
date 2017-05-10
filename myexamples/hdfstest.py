@@ -1,15 +1,15 @@
 ### THIS IS THE SCRIPT WE ARE GOING TO EXECUTE IN THE GRID5000 FRONTEND AND THE TEMPLATE FOR OUR EXPERIMENTS
 ### THIS SCRIPTS WILL BE PLACE INSIDE THE EXECO_UTILITIES_G5K root directory, possibly in a experiments folder and executed like py experiments/script.py
 import sys
-#   we add the paths in the frontend to be able to import SparkBench and the Experiment classes
+#   we add the paths in the frontend to be able to import SparkBench and the OARExperiment classes
 ## TODO: Add the paths in PYTHON environment variable so you can import directly.
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/spark"])
 sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
 from sparkbench import SparkBench
-from hdfs_experiment import HdfsExperiment
+from experiments.hdfs_oarexperiment import HdfsOARExperiment
 
 
-class SparkExperimentTestBenchmark(HdfsExperiment):
+class SparkExperimentTestBenchmark(HdfsOARExperiment):
     def run(self):  ## remember to set the home_directory variable to the sparkbenchmark root directory
         sb = SparkBench(home_directory="/home/abrandon/execo-g5k-benchmarks/spark/spark-bench/", master_node=spark_experiment.masternode,
                     resource_manager="yarn",root_to_spark_submit="/opt/spark/bin/spark-submit",default_master="yarn")
@@ -21,14 +21,14 @@ class SparkExperimentTestBenchmark(HdfsExperiment):
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = {"cluster":[("graphene",4)]}
+    dict = {"cluster":[("graphite",1)]}
     walltime = "3:25:00"
     date=None
     experiment_name="spark_benchmark_2.0_test"
     frontend="nancy"
     description="This is an experiment to test spark-bench against the 2.0.1 version of Spark"
     spark_experiment = SparkExperimentTestBenchmark(frontend=frontend,resources=dict,walltime=walltime,
-                            date=date,experiment_name=experiment_name,description=description,ndatanodes=4,nnodemanagers=3,colocated=True,os_memory=2)
+                            date=date,experiment_name=experiment_name,description=description,ndatanodes=1,nnodemanagers=1,colocated=True,os_memory=2)
     # TODO: All of this instructions can be wrapped in a method like .start()
     spark_experiment.reserve_nodes()
     spark_experiment.deploy_nodes()

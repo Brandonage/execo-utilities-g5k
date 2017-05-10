@@ -1,8 +1,8 @@
-import hadoop_util
-import spark_util
-import monitoring_util
-import mongodb_util
-from experiment import *
+from os import makedirs
+from os.path import exists
+
+from oarexperiment import OARExperiment
+from utils import general_util, spark_util, hadoop_util, mongodb_util, monitoring_util
 
 
 ###TODO TO BE INCLUDED IN A SEPARATE MODULE WITH ALL THE TYPES OF EXPERIMENTS WE CAN HAVE. A FACTORY OF EXPERIMENTS WILL
@@ -11,24 +11,26 @@ from experiment import *
 # (frontend: String, resources: dict of resources we want to reserve, walltime : HH:MM:SS, date : when to start experiment,
 # experiment_name : String, datanodes: Int, nodemanager: Int, colocated:boolean, OS_memory : Int )
 ## This is in fact a template object that we can copy to create new experiments overriding the run part
-class SparkExperiment(Experiment):
+class SparkOARExperiment(OARExperiment):
     datanodes_list = None
     nodemanagers_list = None
     masternode = None
 
     ##TODO Topology of the cluster (Maybe not needed, the nodes are enough for it. Although it will be nice to have a description of the cluster, (e.g memory on each node and the CPU's and so on)
-    def __init__(self, frontend, resources, walltime, date, experiment_name,description, ndatanodes, nnodemanagers, colocated,
+    def __init__(self, frontend, resources, walltime, date, experiment_name, description,
+                 ndatanodes, nnodemanagers, colocated,
                  os_memory):
-        Experiment.__init__(self, frontend, resources, walltime, date, experiment_name, description)
+        OARExperiment.__init__(self, frontend, resources, walltime, date, experiment_name, description)
         self.ndatanodes = ndatanodes
         self.nnodemanagers = nnodemanagers
         self.colocated = colocated
         self.os_memory = os_memory
 
 
-    def install(self):  ## install all the necessary things for an Spark Experiment
+    def install(self):  ## install all the necessary things for an Spark OARExperiment
         # before starting the installation process, let's check if the deployed nodes are sufficient for the specified roles
-        hadoop_util.validate_cluster_parameters(self.nodes,self.ndatanodes,self.nnodemanagers,self.colocated)
+        hadoop_util.validate_cluster_parameters(self.nodes, self.ndatanodes, self.nnodemanagers, self.colocated)
+        general_util.install_general_utils(self.nodes)
         # prepare the JDK
         general_util.update_apt(self.nodes)
         general_util.install_JDK_8(self.nodes)
@@ -41,7 +43,7 @@ class SparkExperiment(Experiment):
         # 2. install the files needed
         hadoop_util.install_hadoop(self.nodesDF, self.masternode, self.datanodes_list, self.os_memory)
         # start the spark installation
-        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, monitor=True,source="1.6.2")
+        spark_util.install_spark(master=self.masternode, slaves=self.nodemanagers_list, monitor=True, source="1.6.2")
         # prepare the files for dynamic allocation. This copies spark-*-yarn-shuffle.jar to the share yarn directory
         spark_util.prepare_dynamic_allocation(nodemanagers=self.nodemanagers_list)
         # launch hadoop daemons
@@ -49,7 +51,7 @@ class SparkExperiment(Experiment):
         spark_util.start_history_server(masternode=self.masternode)
         mongodb_util.install_and_run_mongodb(self.masternode)
         # install dstat (to be used by GMone)
-        general_util.install_dstat(self.nodes)
+        monitoring_util.install_dstat(self.nodes)
         # install and start gmone
         monitoring_util.install_gmone(master=self.masternode, slaves=self.nodemanagers_list)
         monitoring_util.start_gmone(master=self.masternode, slaves=self.nodemanagers_list)
@@ -63,7 +65,7 @@ class SparkExperiment(Experiment):
 
     # save the results of the experiment
     def save_results(self):
-        Experiment.save_results(self)  # parent method common to all experiments
+        OARExperiment.save_results(self)  # parent method common to all experiments
         with open("{0}/roles_description.txt".format(self.results_directory), "w") as text_file:
             text_file.write(self.spark_cluster_description()) # save all the roles of the hadoop cluster
         # create the directory where the mongo export files are going to be
@@ -83,7 +85,7 @@ class SparkExperiment(Experiment):
     def describe_cluster(self):
         print self.spark_cluster_description()
 
-    # From here we find the methods that belong to the SparkExperiment class
+    # From here we find the methods that belong to the SparkOARExperiment class
     #
     # A description of the cluster
     def spark_cluster_description(self):

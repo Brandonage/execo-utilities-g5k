@@ -1,4 +1,4 @@
-from general_util import *
+from utils.general_util import *
 
 
 class NodesSpecificationError(Exception):
@@ -74,7 +74,7 @@ def install_hadoop(nodesDF,masternode,nodemanagers,osMemory,source=None):
     hadoop_home = "/opt/hadoop" ## The directory where we are going to install hadoop in g5k
     hadoop_conf = hadoop_home + "/etc/hadoop"
     if source==None:
-        tarball_url = "http://apache.uvigo.es/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz" ## whatever version we want
+        tarball_url = "http://apache.uvigo.es/hadoop/common/hadoop-2.8.0/hadoop-2.8.0.tar.gz" ## whatever version we want
         Remote("wget {url} -O {destination}/hadoop.tar.gz 2>1".format(url=tarball_url,destination=wget_destination),
            hosts=all_hosts,connection_params={'user': 'root'}).run() ## Download the hadoop distribution on it
         Remote("cd {0} && tar -xvzf hadoop.tar.gz".format(wget_destination),hosts=all_hosts,

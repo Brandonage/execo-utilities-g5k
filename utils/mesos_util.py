@@ -1,4 +1,4 @@
-from general_util import *
+from utils.general_util import *
 
 #   TODO: Implement the logic to choose the masternodes and slaves of mesos
 

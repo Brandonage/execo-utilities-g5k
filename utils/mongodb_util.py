@@ -1,4 +1,4 @@
-from general_util import *
+from utils.general_util import *
 
 #   Install mongodb on one node. Normally the master node in a spark topology
 def install_and_run_mongodb(node):
