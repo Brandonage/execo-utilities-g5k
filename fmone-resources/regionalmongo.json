@@ -1,0 +1,57 @@
+{
+	"id": "/fmonmongorpipe@region@",
+	"groups": [
+		{
+			"id": "/fmonmongorpipe@region@/mongor@region@",
+			"apps":[
+				{
+					"id": "/fmonmongorpipe@region@/mongor@region@/mongoregion@region@",
+			  		"cpus": 0.2,
+			  		"mem": 400,
+			  		"container": {
+			    		"type": "DOCKER",
+			    		"docker": {
+			      			"network": "HOST",
+			      			"image": "mongo:latest",
+			      			"forcePullImage": true
+			    		}
+			  		},
+			  		"instances": 1,
+			  		"constraints": [["region", "CLUSTER", "region@region@"]]
+				}
+			]
+		},
+		{
+			"id": "/fmonmongorpipe@region@/fmon@region@",
+			"dependencies": ["/fmonmongorpipe@region@/mongor@region@"],
+			"apps":[
+				{
+					"id": "/fmonmongorpipe@region@/fmon@region@/fmoneagentregion@region@",
+			  		"cpus": 0.2,
+					"mem": 100,
+					"container": {
+					  "type": "DOCKER",
+					  "docker": {
+					    "network": "HOST",
+					    "image": "alvarobrandon/fmone-agent",
+					    "forcePullImage": true
+					  },
+					"volumes": [
+					    {
+					      "containerPath": "/proc_host",
+					      "hostPath": "/proc",
+					      "mode": "RO"
+					    }
+					  ]
+					},
+					"args": ["5","5","cpu","inout","mongodb","--mongo_machine_out","mongoregion@region@.mongor@region@.fmonmongorpipe@region@.marathon-user.mesos","--mongo_collection_out","region-@region@-cpu"],
+					"instances": @nslaves@,
+					"constraints": [["region", "CLUSTER", "region@region@"]]
+				}
+			]
+		}
+	]
+}
+
+
+

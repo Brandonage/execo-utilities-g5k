@@ -1,0 +1,87 @@
+{
+	"id": "/fmonaggpipe@region@",
+	"groups": [
+		{
+			"id": "/fmonaggpipe@region@/rabbitmqr@region@",
+			"apps":[
+				{ 
+					"id": "/fmonaggpipe@region@/rabbitmqr@region@/rabbitmqregion@region@",
+			  		"cpus": 0.2,
+			  		"mem": 200,
+			  		"container": {
+			    		"type": "DOCKER",
+			    		"docker": {
+			      			"network": "HOST",
+			      			"image": "rabbitmq:3-alpine",
+			      			"forcePullImage": true
+			    		}
+			  		},
+			  		"instances": 1,
+			  		"constraints": [["region", "CLUSTER", "region@region@"]]
+				}
+			]
+		},
+		{
+			"id": "/fmonaggpipe@region@/fmonagg@region@",
+			"dependencies": ["/fmonaggpipe@region@/rabbitmqr@region@"],
+			"apps":[
+				{ 
+					"id": "/fmonaggpipe@region@/fmonagg@region@/fmoneagentaggregion@region@",
+			  		"cpus": 0.2,
+					"mem": 100,
+					"container": {
+					  "type": "DOCKER",
+					  "docker": {
+					    "network": "HOST",
+					    "image": "alvarobrandon/fmone-agent",
+					    "forcePullImage": true
+					  },
+					"volumes": [
+					    {
+					      "containerPath": "/proc_host",
+					      "hostPath": "/proc",
+					      "mode": "RO"
+					    }
+					  ]  
+					},
+					"args": ["5","5","rabbitmq","average","mongodb","--mq_machine_in","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_in","region@region@","--mongo_machine_out","mongocloud.marathon-user.mesos","--mongo_collection_out","region@region@-aggregate"],
+					"instances": 1,
+					"constraints": [["region", "CLUSTER", "region@region@"]]
+				}
+			]
+		},
+		{
+			"id": "/fmonaggpipe@region@/fmon@region@",
+			"dependencies": ["/fmonaggpipe@region@/fmonagg@region@"],
+			"apps":[
+				{ 
+					"id": "/fmonaggpipe@region@/fmon@region@/fmoneagentregion@region@",
+			  		"cpus": 0.2,
+					"mem": 100,
+					"container": {
+					  "type": "DOCKER",
+					  "docker": {
+					    "network": "HOST",
+					    "image": "alvarobrandon/fmone-agent",
+					    "forcePullImage": true
+					  },
+					"volumes": [
+					    {
+					      "containerPath": "/proc_host",
+					      "hostPath": "/proc",
+					      "mode": "RO"
+					    }
+					  ]  
+					},
+					"args": ["5","5","cpu","inout","rabbitmq","--mq_machine_out","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_out","region@region@"],
+					"instances": @nslaves@,
+					"constraints": [["region", "CLUSTER", "region@region@"]]
+				}
+			]
+		}
+	]
+}
+
+
+
+

@@ -1,0 +1,19 @@
+---
+agent_list:
+@agent_list@
+bootstrap_url: file:///opt/dcos_install_tmp
+cluster_name: DC/OS
+exhibitor_storage_backend: static
+ip_detect_path: genconf/ip-detect
+master_discovery: static
+master_list:
+@master_list@
+oauth_enabled: false
+process_timeout: 10000
+public_agent_list:
+@public_agent_list@
+resolvers:
+@resolvers_list@
+ssh_key_path: genconf/ssh_key
+ssh_port: 22
+ssh_user: vagrant

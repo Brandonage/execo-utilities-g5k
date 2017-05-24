@@ -40,7 +40,7 @@ def get_resource(node_dict, resource):
                        jsonpath_expr.find(node_dict)]  ## Get a list of data from the JSON that matches that pattern
     if len(list_of_results) == 0:
         return ""
-    else:  ##Different resources will have different semantics for their values. We get them through the following if statements
+    else:  # Different resources will have different formats in their JSON values. We give them a readable format through this logic
         if (resource in ["power_available", "node_flops", "CPU description", "GPU",
                          "cores"]):  ##if the resource has a unique value
             return list_of_results[0].value  ##return the single value
@@ -81,8 +81,13 @@ def build_dataframe_of_nodes(nodes):
     return DataFrame(d)
 
 
-### infile: String with the file in, outfile: String with the file out, substitutions: dictionary of substitutions
 def replace_infile(pathin, pathout, replacements):
+    """
+    it replaces all the occurences of a word for another one included in a dictionary
+    :param pathin: the path for the input file
+    :param pathout: the path where the output file will be copied
+    :param replacements: a dictionary with the replacements we want to make e.g. replacements={"@namenode@":"paravance-5.grid5000.fr"}
+    """
     with open(pathin) as infile, open(pathout, 'w') as outfile:
         for line in infile:
             for src, target in replacements.iteritems():
@@ -149,7 +154,7 @@ def kill_all_processes(name, nodes):
 def get_dns_server(node):
     p = SshProcess("cat /etc/resolv.conf | grep nameserver", node)
     p.run()
-    return p.stdout
+    return {p.stdout.split(' ')[1].replace('\r\n', '')} # some preprocessing we need to eliminate strange symbols
 
 
 def divide_nodes_into_regions(proportions, nodes):

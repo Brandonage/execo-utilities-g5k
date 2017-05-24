@@ -40,3 +40,25 @@ def split_dcos_roles(nodesDF,nmasters,npublic_agents,nprivate_agents):
     splits = np.cumsum([nbootstrap,nmasters,npublic_agents,nprivate_agents])[:-1]
     res = np.split(nodes, splits)
     return set(res[0]), set(res[1]), set(res[2]), set(res[3])
+
+def prepare_config_yaml(masters,private_agents,public_agents,dns_resolver,output_file):
+    str_priv_agent = '- ' + '\n- '.join(list(private_agents)) + '\n'
+    str_pub_agent = '- ' + '\n- '.join(list(public_agents)) + '\n'
+    str_master_agent = '- ' + '\n- '.join(list(masters)) + '\n'
+    str_dns = '- ' + '\n- '.join(list(dns_resolver)) + '\n- 8.8.8.8\n- 8.8.4.4' + '\n' # Add google DNS
+    replace_infile(pathin="dcos-resources/config_template.yaml",
+                   pathout=output_file,
+                   replacements={"@agent_list@": str_priv_agent,
+                                 "@master_list@": str_master_agent,
+                                 "@public_agent_list@": str_pub_agent,
+                                 "@resolvers_list@": str_dns})
+
+
+def restart_dcos_mesos_slave(slaves):
+    Remote("systemctl stop dcos-mesos-slave",
+                        hosts=slaves).run()
+    Remote("rm -f /var/lib/mesos/slave/meta/slaves/latest",
+                        hosts=slaves).run()
+    Remote("systemctl start dcos-mesos-slave",
+                        hosts=slaves).run()
+
