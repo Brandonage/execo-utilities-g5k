@@ -41,8 +41,13 @@
 					      "containerPath": "/proc_host",
 					      "hostPath": "/proc",
 					      "mode": "RO"
-					    }
-					  ]  
+					    },
+						{
+						  "containerPath" : "/cgroup_host",
+						  "hostPath": "/sys/fs/cgroup",
+						  "mode": "RO"
+						}
+					  ]
 					},
 					"args": ["5","5","rabbitmq","average","mongodb","--mq_machine_in","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_in","region@region@","--mongo_machine_out","mongocloud.marathon-user.mesos","--mongo_collection_out","region@region@-aggregate"],
 					"instances": 1,
@@ -70,8 +75,13 @@
 					      "containerPath": "/proc_host",
 					      "hostPath": "/proc",
 					      "mode": "RO"
-					    }
-					  ]  
+					    },
+						{
+						  "containerPath" : "/cgroup_host",
+						  "hostPath": "/sys/fs/cgroup",
+						  "mode": "RO"
+						}
+					  ]
 					},
 					"args": ["5","5","cpu","inout","rabbitmq","--mq_machine_out","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_out","region@region@"],
 					"instances": @nslaves@,

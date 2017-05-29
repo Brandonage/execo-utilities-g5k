@@ -41,7 +41,12 @@
 					      "containerPath": "/proc_host",
 					      "hostPath": "/proc",
 					      "mode": "RO"
-					    }
+					    },
+						{
+						  "containerPath" : "/cgroup_host",
+						  "hostPath": "/sys/fs/cgroup",
+						  "mode": "RO"
+						}
 					  ]
 					},
 					"args": ["5","5","cpu","inout","mongodb","--mongo_machine_out","mongoregion@region@.mongor@region@.fmonmongorpipe@region@.marathon-user.mesos","--mongo_collection_out","region-@region@-cpu"],

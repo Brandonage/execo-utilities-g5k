@@ -45,7 +45,7 @@ def prepare_config_yaml(masters,private_agents,public_agents,dns_resolver,output
     str_priv_agent = '- ' + '\n- '.join(list(private_agents)) + '\n'
     str_pub_agent = '- ' + '\n- '.join(list(public_agents)) + '\n'
     str_master_agent = '- ' + '\n- '.join(list(masters)) + '\n'
-    str_dns = '- ' + '\n- '.join(list(dns_resolver)) + '\n- 8.8.8.8\n- 8.8.4.4' + '\n' # Add google DNS
+    str_dns = '- ' + '\n- '.join(list(dns_resolver)) + '\n'
     replace_infile(pathin="dcos-resources/config_template.yaml",
                    pathout=output_file,
                    replacements={"@agent_list@": str_priv_agent,

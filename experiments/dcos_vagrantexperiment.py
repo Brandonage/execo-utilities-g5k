@@ -116,14 +116,14 @@ class DcosVagrantExperiment(VagrantExperiment):
             print "The region {0} has the nodes: {1}".format(region_name,self.regions[i])
 
     def run(self,nslaves):
-        general_util.limit_bandwith_qdisc(nodes=self.private_agents,netem_idx="10",cap_rate="86Mbit")
+        general_util.limit_bandwith_qdisc(nodes=self.private_agents,netem_idx="10",cap_rate="5Mbit")
         general_util.create_delay_qdisc(nodes=self.private_agents,
                                         netem_idx="10",
-                                        delay="100ms",
+                                        delay="200ms",
                                         jitter="0.1ms",
                                         packet_loss="0.1%")
         for (orig_region, dest_region) in permutations(self.regions,2):
             general_util.add_delay_between_regions(orig_region, dest_region,netem_idx="10")
-        fmone_util.execute_pipeline("central_mongo",{"@nslaves@" : "95", "@region@" : "central"},
+        fmone_util.execute_pipeline("central_mongo",{"@nslaves@" : "17", "@region@" : "central"},
                                     self.masters,general_util.default_connection_params)
 
