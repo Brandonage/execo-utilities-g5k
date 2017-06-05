@@ -1,5 +1,5 @@
 from os.path import exists, expanduser
-from os import remove, makedirs
+from os import makedirs
 from time import strftime
 import pickle
 from utils import vagrantg5k_util

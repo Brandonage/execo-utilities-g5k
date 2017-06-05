@@ -5,7 +5,7 @@ import sys
 ## TODO: Add the paths in PYTHON environment variable so you can import directly.
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/spark"])
 sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
-from sparkbench import SparkBench
+from spark.sparkbench import SparkBench
 from experiments.hdfs_oarexperiment import HdfsOARExperiment
 
 

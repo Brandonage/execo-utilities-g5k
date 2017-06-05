@@ -10,6 +10,7 @@ from numpy import mean, nan, array, split, cumsum
 from pandas import DataFrame
 from common.custom_output_handler import PyConsoleOutputHandler
 import warnings
+import sys
 
 bytes_in_gigabyte = 1073741824  ## The number of bytes in one gigabyte
 bytes_in_megabyte = 1048576
@@ -134,15 +135,30 @@ def install_JDK_7(nodes):
            connection_params={'user': 'root'}).run()
 
 
-def install_JDK_8(nodes):
+def install_JDK_8(nodes, os="jessie"):
     #   We need backports with the jessie distribution
-    Remote("apt install -yt jessie-backports  openjdk-8-jre-headless ca-certificates-java", hosts=nodes,
-           connection_params={'user': 'root'}).run()
-    Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-8-jre -y openjdk-8-jdk", hosts=nodes,
-           connection_params={'user': 'root'}).run()
-    #   We need to update the path to the 8 version
-    Remote("update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java", hosts=nodes,
-           connection_params={'user': 'root'}).run()
+    """
+
+    :param nodes: the nodes where we want to install jdk
+    :param os: the operating system since different os's will have different procedures. Choose from ["jessie","centos"]
+    """
+    if (os=="jessie"):
+        Remote("apt install -yt jessie-backports  openjdk-8-jre-headless ca-certificates-java", hosts=nodes,
+               connection_params={'user': 'root'}).run()
+        Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-8-jre -y openjdk-8-jdk", hosts=nodes,
+               connection_params={'user': 'root'}).run()
+        #   We need to update the path to the 8 version
+        Remote("update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java", hosts=nodes,
+               connection_params={'user': 'root'}).run()
+    elif (os=="centos"):
+        Remote("wget --no-cookies --no-check-certificate --header \"Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie\" \"http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm\"",
+               hosts=nodes,
+               process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+        Remote("sudo yum -y localinstall jdk-8u131-linux-x64.rpm",
+               hosts=nodes,
+               process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    else:
+        print "INSTALLING JDK FOR THIS OS VERSION IS NOT IMPLEMENTED"
 
 
 def kill_all_processes(name, nodes):
@@ -219,4 +235,12 @@ def add_delay_between_nodes(nodes, node_dest, netem_idx):
     Remote("sudo tc filter add dev eth0 parent 1: protocol ip u32 match ip dst {0} flowid 1:{1}"
            .format(node_dest, netem_idx), hosts=nodes).run()
     # sudo tc filter add dev eth0 parent 1: protocol ip u32 match ip dst node_dest flowid 1:netem_idx
-    pass
+
+# TODO: This is done in order for the DockerInPlugin to access the Docker daemon through TCP. This is a security issue
+# The idea is to access this information through the files in the cgroup folder.
+def restart_docker_daemon(nodes):
+    Put(hosts=nodes, local_files=["fmone-resources/daemon.json"]).run()
+    Remote("sudo cp daemon.json /etc/docker/daemon.json"
+           ,hosts=nodes).run()
+    Remote("sudo systemctl restart docker"
+           ,hosts=nodes).run()

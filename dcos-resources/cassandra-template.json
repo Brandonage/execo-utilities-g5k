@@ -1,0 +1,6 @@
+{
+    "nodes": {
+        "count": @ncassandra@,
+        "seeds": @nseeds@
+    }
+}

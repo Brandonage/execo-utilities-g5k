@@ -18,7 +18,13 @@ if __name__ == '__main__':
     vagrantdcos_deployment.reserve_nodes()
     vagrantdcos_deployment.deploy_nodes()
     vagrantdcos_deployment.install()
-    vagrantdcos_deployment.build_regions(proportions=[25, 75], central_region={'10.158.1.231'})
+    vagrantdcos_deployment.build_regions(proportions=[25, 75], central_region={list(vagrantdcos_deployment.private_agents)[0]})
+    vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
+    vagrantdcos_deployment.install_cassandra(ncassandra="5",nseeds="3")
+    # TODO: All of this should go into the run procedure
+    vagrantdcos_deployment.ycsb_install()
+    # Stop here. You have to prepare the cassandra DB
+    vagrantdcos_deployment.ycsb_run(workload="workloada", recordcount="10000",threadcount="1")
     vagrantdcos_deployment.run()
 
 
