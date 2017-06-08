@@ -11,7 +11,7 @@ sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
 from ycsb.cassandraycsb import CassandraYCSB
 
 
-class DcosVagrantExperiment(VagrantExperiment):
+class FmoneVagrantExperiment(VagrantExperiment):
     masters = None
     public_agents = None
     private_agents = None
@@ -48,9 +48,6 @@ class DcosVagrantExperiment(VagrantExperiment):
             VagrantExperiment.reserve_nodes(self)
 
     def install(self):
-        # Fix this hack
-        general_util.restart_docker_daemon(self.nodes)
-        print "Restarting the docker daemons to allow DockerInPlugin to connect"
         # TODO: THIS SHOULD ALL GO INTO THE DCOS_UTIL FILE AS A FUNCTION "INSTALL DCOS"
         # E.G INSTALL_DCOS(NODESDF,NMASTERS,NPAGENTS,NPRIVAGENTS)
         config_yaml_output = "dcos-resources/config.yaml"
@@ -134,45 +131,75 @@ class DcosVagrantExperiment(VagrantExperiment):
             print "The region {0} has the nodes: {1}".format(region_name, self.regions[i])
 
     def install_cassandra(self, ncassandra, nseeds):
-        self.cassandra_nodes = dcos_util.install_cassandra(masternode=list(self.masters)[0], ncassandra=ncassandra,
+        master = list(self.masters)[0]
+        master_name = self.nodesDF[self.nodesDF['ip'] == master].name.values[0]
+        print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
+            .format(list(master_name))
+        print "And this: dcos package install cassandra --cli"
+        raw_input("After executing press enter: ")
+        self.cassandra_nodes = dcos_util.install_cassandra(masternode=master, ncassandra=ncassandra,
                                                            nseeds=nseeds)
 
     def ycsb_install(self):
-        nodes_to_install = set({})  # An empty set where we will add nodes in which we want to install ycsb
-        for region in self.regions:  # We will install yscb only in one node per region
-            nodes_to_install.add(list(region)[0])
+        # We will install yscb only in one node per region
+        nodes_to_install = set([list(region)[0] for region in self.regions])
+        # we move the ycsb benchmark that we rsynced to home in order for the CassandraYCSB class to take care of all
+        #  the installation process
+        general_util.Remote("mv /vagrant/resources/ycsb-0.12.0.tar.gz /home/vagrant/ycsb-0.12.0.tar.gz",hosts=nodes_to_install).run()
         general_util.install_JDK_8(nodes_to_install, os="centos")
         self.cassandra_ycsb = CassandraYCSB(install_nodes=nodes_to_install,
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
                                             cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
 
-    def ycsb_run(self, workload, recordcount, threadcount):
+    def ycsb_run(self, iterations, res_dir, workload, recordcount, threadcount):
         # we build a list of single elements sets with the nodes that will run the yscb workload
-        yscb_clients = set([list(region)[0] for region in self.regions])
-        # divide the number of records equally among clients
-        insertcount = int(recordcount) / yscb_clients.__len__()
-        insertstart = 0
-        for client in yscb_clients:
-            self.cassandra_ycsb.load_workload(from_node=client,
+        yscb_clients = self.cassandra_ycsb.install_nodes
+        # create a directory for the results
+        recordcount="1000"
+        threadcount="1"
+        workloads = ["workloada", "workloadb", "workloadc", "workloadd", "workloade", "workloadf"]
+        for workload in workloads:
+            general_util.Remote(cmd="mkdir " + res_dir, hosts=yscb_clients).run()
+            self.cassandra_ycsb.load_workload(from_node=yscb_clients,
                                               workload=workload,
                                               recordcount=recordcount,
-                                              insertcount=insertcount,
-                                              insertstart=insertstart,
                                               threadcount=threadcount)
-            insertstart = insertstart + insertcount
-        for client in yscb_clients:
-            self.cassandra_ycsb.run_workload(from_node=client,
-                                             workload=workload,
-                                             threadcount=threadcount)
+            for i in range(iterations):
+                self.cassandra_ycsb.run_workload(iteration=i,
+                                                 res_dir=res_dir,
+                                                 from_node=yscb_clients,
+                                                 workload=workload,
+                                                 threadcount=threadcount)
 
-    def run(self, nslaves):
-        general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate="5Mbit")
+    def add_delay(self,delay,bandwith):
+        general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwith)
         general_util.create_delay_qdisc(nodes=self.private_agents,
                                         netem_idx="10",
-                                        delay="200ms",
+                                        delay=delay,
                                         jitter="0.1ms",
                                         packet_loss="0.1%")
         for (orig_region, dest_region) in permutations(self.regions, 2):
             general_util.add_delay_between_regions(orig_region, dest_region, netem_idx="10")
-        fmone_util.execute_pipeline("central_mongo", {"@nslaves@": "17", "@region@": "central"},
+
+    def run_fmone_pipeline(self):
+        fmone_util.execute_pipeline("central_ycsb", {"@nslaves@": str(self.private_agents.__len__()), "@region@": "central"},
                                     self.masters, general_util.default_connection_params)
+
+    def save_results(self):
+        VagrantExperiment.save_results(self)
+        yscb_clients = set([list(region)[0] for region in self.regions])
+        general_util.Get(hosts=yscb_clients,
+                         remote_files=["with_fmone","no_fmone"],
+                         local_location=self.results_directory).run()
+
+    def analyse_results(self):
+        workloads = ["workloada", "workloadb", "workloadc", "workloadd", "workloade", "workloadf"]
+        directories = ["/with_fmone", "/no_fmone"]
+        results = {}
+        for d in directories:
+            for w in workloads:
+                list_of_metrics, metrics_mean = self.cassandra_ycsb.analyse_output(directory=self.results_directory + d,
+                                                                                   workload=w,
+                                                                                   metric="Throughput")
+                results[w + d] = (list_of_metrics,metrics_mean)
+                print "For workload {0} and {1} the mean throughput is: {2}".format(w,d,metrics_mean)

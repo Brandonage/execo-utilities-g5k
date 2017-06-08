@@ -142,7 +142,7 @@ def install_JDK_8(nodes, os="jessie"):
     :param nodes: the nodes where we want to install jdk
     :param os: the operating system since different os's will have different procedures. Choose from ["jessie","centos"]
     """
-    if (os=="jessie"):
+    if (os == "jessie"):
         Remote("apt install -yt jessie-backports  openjdk-8-jre-headless ca-certificates-java", hosts=nodes,
                connection_params={'user': 'root'}).run()
         Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-8-jre -y openjdk-8-jdk", hosts=nodes,
@@ -150,10 +150,11 @@ def install_JDK_8(nodes, os="jessie"):
         #   We need to update the path to the 8 version
         Remote("update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java", hosts=nodes,
                connection_params={'user': 'root'}).run()
-    elif (os=="centos"):
-        Remote("wget --no-cookies --no-check-certificate --header \"Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie\" \"http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm\"",
-               hosts=nodes,
-               process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    elif (os == "centos"):
+        Remote(
+            "wget --no-cookies --no-check-certificate --header \"Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie\" \"http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm\"",
+            hosts=nodes,
+            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
         Remote("sudo yum -y localinstall jdk-8u131-linux-x64.rpm",
                hosts=nodes,
                process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
@@ -170,7 +171,7 @@ def kill_all_processes(name, nodes):
 def get_dns_server(node):
     p = SshProcess("cat /etc/resolv.conf | grep nameserver", node)
     p.run()
-    return {p.stdout.split(' ')[1].replace('\r\n', '')} # some preprocessing we need to eliminate strange symbols
+    return {p.stdout.split(' ')[1].replace('\r\n', '')}  # some preprocessing we need to eliminate strange symbols
 
 
 def divide_nodes_into_regions(proportions, nodes):
@@ -236,11 +237,21 @@ def add_delay_between_nodes(nodes, node_dest, netem_idx):
            .format(node_dest, netem_idx), hosts=nodes).run()
     # sudo tc filter add dev eth0 parent 1: protocol ip u32 match ip dst node_dest flowid 1:netem_idx
 
-# TODO: This is done in order for the DockerInPlugin to access the Docker daemon through TCP. This is a security issue
+
 # The idea is to access this information through the files in the cgroup folder.
 def restart_docker_daemon(nodes):
     Put(hosts=nodes, local_files=["fmone-resources/daemon.json"]).run()
     Remote("sudo cp daemon.json /etc/docker/daemon.json"
-           ,hosts=nodes).run()
+           , hosts=nodes).run()
     Remote("sudo systemctl restart docker"
-           ,hosts=nodes).run()
+           , hosts=nodes).run()
+
+
+def check_if_file_exists(file_name, nodes):
+    r = Remote(cmd="test -e " + file_name,
+               hosts=nodes,
+               process_args={"nolog_exit_code": True}
+               )
+    r.run()
+    not_ok = filter(lambda p: p.ok is not True, r.processes)
+    return set([node.host.address for node in not_ok])

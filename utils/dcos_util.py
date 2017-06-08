@@ -81,11 +81,10 @@ def install_cassandra(masternode,ncassandra,nseeds):
                    replacements={"@ncassandra@":ncassandra,"@nseeds@":nseeds}
                    )
     Put(hosts=masternode,local_files=["dcos-resources/cassandra-config.json"]).run()
-    print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
-        .format(list(masternode)[0])
-    print "And this: dcos package install cassandra --cli"
-    raw_input("After executing press enter: ")
-
+    # print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
+    #     .format(list(masternode))
+    # print "And this: dcos package install cassandra --cli"
+    # raw_input("After executing press enter: ")
     # r = Remote(cmd="dcos package install --yes --options=cassandra-config.json cassandra",
     #        hosts=masternode,
     #        process_args={'stdout_handlers': [sys.stdout],

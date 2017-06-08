@@ -10,7 +10,8 @@ def build_json_pipeline(type_of_pipeline,replacements):
     """
     templates = {"aggregate_and_centralise": "fmone-resources/fmoneagg.json",
                  "regional_mongo" : "fmone-resources/regionalmongo.json",
-                 "central_mongo": "fmone-resources/centralmongo.json"}
+                 "central_mongo": "fmone-resources/centralmongo.json",
+                 "central_ycsb" : "fmone-resources/centralycsb.json"}
     try:
         replace_infile(templates[type_of_pipeline],"fmone-resources/exec.json",replacements)
         with open("fmone-resources/exec.json",'r') as f:
