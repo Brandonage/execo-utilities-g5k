@@ -78,8 +78,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         # We put the generate_config.sh directly from our local directory to the bootstrap machine
         general_util.Put(hosts=self.bootstrap,
                          local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
-                         remote_location="/home/vagrant/dcos_generate_config.sh",
-                         process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+                         remote_location="/home/vagrant/dcos_generate_config.sh"
+                         ).run()
         general_util.Remote("sudo bash dcos_generate_config.sh --genconf",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
@@ -161,7 +161,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         # create a directory for the results
         recordcount="1000"
         threadcount="1"
-        workloads = ["workloada", "workloadb", "workloadc", "workloadd", "workloade", "workloadf"]
+        workloads = ["workloada", "workloadb", "workloade", "workloadf"]
         for workload in workloads:
             general_util.Remote(cmd="mkdir " + res_dir, hosts=yscb_clients).run()
             self.cassandra_ycsb.load_workload(from_node=yscb_clients,
@@ -176,7 +176,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                                  threadcount=threadcount)
 
     def add_delay(self,delay,bandwidth):
-        general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwith)
+        general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwidth)
         general_util.create_delay_qdisc(nodes=self.private_agents,
                                         netem_idx="10",
                                         delay=delay,
@@ -191,13 +191,13 @@ class FmoneVagrantExperiment(VagrantExperiment):
 
     def save_results(self):
         VagrantExperiment.save_results(self)
-        yscb_clients = set([list(region)[0] for region in self.regions])
+        yscb_clients = self.cassandra_ycsb.install_nodes
         general_util.Get(hosts=yscb_clients,
                          remote_files=["with_fmone","no_fmone"],
                          local_location=self.results_directory).run()
 
     def analyse_results(self):
-        workloads = ["workloada", "workloadb", "workloadc", "workloadd", "workloade", "workloadf"]
+        workloads = ["workloada", "workloadb"]
         directories = ["/with_fmone", "/no_fmone"]
         results = {}
         for d in directories:
@@ -230,3 +230,4 @@ class FmoneVagrantExperiment(VagrantExperiment):
         except AttributeError:
             warnings.warn("There were some attributes missing. Removing node in all possible parts of experiment",
                           UserWarning)
+

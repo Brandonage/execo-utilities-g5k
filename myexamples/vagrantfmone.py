@@ -1,10 +1,12 @@
-from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment
 import sys
+sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
+sys.path.extend(["/home/abrandon/execo-g5k-benchmarks"])
+from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment
 from time import sleep
 from aux_utilities.twilio_client import create_twilio_client
 
 
-sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
+
 
 
 
