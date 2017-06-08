@@ -1,6 +1,5 @@
 from general_util import *
 import numpy as np
-import sys
 from ast import literal_eval
 
 def install_dcos_vagrant(nodes):

@@ -1,7 +1,7 @@
 from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment
 import sys
 from time import sleep
-from common.twilio_client import create_twilio_client
+from aux_utilities.twilio_client import create_twilio_client
 
 
 sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
@@ -22,14 +22,14 @@ if __name__ == '__main__':
     vagrantdcos_deployment.deploy_nodes()
     vagrantdcos_deployment.install()
     # I build the regions and I leave the last private node as the central region
-    vagrantdcos_deployment.build_regions(proportions=[33, 33, 33], central_region=set(list(vagrantdcos_deployment.private_agents)[-3:]))
+    vagrantdcos_deployment.build_regions(proportions=[33, 33,33], central_region=set(list(vagrantdcos_deployment.private_agents)[-3:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     vagrantdcos_deployment.install_cassandra(ncassandra="5",nseeds="3")
     # TODO: All of this should go into the run procedure
     vagrantdcos_deployment.ycsb_install()
     # Stop here. You have to prepare the cassandra DB
-    vagrantdcos_deployment.add_delay() # add_delay(bandwidth="5Mbit",delay="50ms")
-    workloads = ["workloada","workloadb","workloadc","workloadd","workloade","workloadf"]
+    vagrantdcos_deployment.add_delay(bandwidth="5Mbit",delay="50ms")
+    workloads = ["workloada","workloadb","workloade","workloadf"]
     for workload in workloads:
         vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "no_fmone",workload=workload, recordcount="1000",threadcount="1")
     client, dest_phone, orig_phone = create_twilio_client()

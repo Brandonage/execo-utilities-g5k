@@ -8,7 +8,7 @@ from execo_g5k import *
 from jsonpath_rw import parse
 from numpy import mean, nan, array, split, cumsum
 from pandas import DataFrame
-from common.custom_output_handler import PyConsoleOutputHandler
+from aux_utilities.custom_output_handler import PyConsoleOutputHandler
 import warnings
 import sys
 

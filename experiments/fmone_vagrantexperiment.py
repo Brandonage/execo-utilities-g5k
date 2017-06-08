@@ -5,6 +5,7 @@ from utils import general_util
 from os.path import expanduser
 from itertools import permutations
 import sys
+import warnings
 
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
 
@@ -74,9 +75,11 @@ class FmoneVagrantExperiment(VagrantExperiment):
                          local_files=[expanduser("~") + "/.vagrant.d/insecure_private_key"],
                          remote_location="/home/vagrant/genconf/ssh_key").run()
         # We now start the installation process
-        general_util.Remote("curl -O https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh",
-                            hosts=self.bootstrap,
-                            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+        # We put the generate_config.sh directly from our local directory to the bootstrap machine
+        general_util.Put(hosts=self.bootstrap,
+                         local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
+                         remote_location="/home/vagrant/dcos_generate_config.sh",
+                         process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
         general_util.Remote("sudo bash dcos_generate_config.sh --genconf",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
@@ -134,7 +137,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         master = list(self.masters)[0]
         master_name = self.nodesDF[self.nodesDF['ip'] == master].name.values[0]
         print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
-            .format(list(master_name))
+            .format(master_name)
         print "And this: dcos package install cassandra --cli"
         raw_input("After executing press enter: ")
         self.cassandra_nodes = dcos_util.install_cassandra(masternode=master, ncassandra=ncassandra,
@@ -145,7 +148,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         nodes_to_install = set([list(region)[0] for region in self.regions])
         # we move the ycsb benchmark that we rsynced to home in order for the CassandraYCSB class to take care of all
         #  the installation process
-        general_util.Remote("mv /vagrant/resources/ycsb-0.12.0.tar.gz /home/vagrant/ycsb-0.12.0.tar.gz",hosts=nodes_to_install).run()
+        general_util.Put(local_files=[expanduser("~") + "/vagrant-g5k/resources/ycsb-0.12.0.tar.gz"],
+                         hosts=nodes_to_install).run()
         general_util.install_JDK_8(nodes_to_install, os="centos")
         self.cassandra_ycsb = CassandraYCSB(install_nodes=nodes_to_install,
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
@@ -171,7 +175,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                                  workload=workload,
                                                  threadcount=threadcount)
 
-    def add_delay(self,delay,bandwith):
+    def add_delay(self,delay,bandwidth):
         general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwith)
         general_util.create_delay_qdisc(nodes=self.private_agents,
                                         netem_idx="10",
@@ -203,3 +207,26 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                                                                    metric="Throughput")
                 results[w + d] = (list_of_metrics,metrics_mean)
                 print "For workload {0} and {1} the mean throughput is: {2}".format(w,d,metrics_mean)
+
+    def remove_node(self,node):
+        """
+        Use this method to remove a node from the experiment
+        """
+        i = 0
+        for set_nodes in self.regions: # for each region
+            if node in set_nodes: # if the node is in the region
+                self.regions[i].remove(node) # we remove it
+                region = self.regions[i] # and we save the region to find a replacement for the substituted one
+            i=i+1
+        try:
+            self.nodesDF = self.nodesDF[self.nodesDF['ip']!= node]
+            self.nodes.remove(node)
+            self.private_agents.remove(node)
+            self.cassandra_nodes.remove(node)
+            self.cassandra_ycsb.install_nodes.remove(node)
+            substitute = list(region)[0]
+            self.cassandra_ycsb.install_nodes.add(substitute)
+            print "Substituted {0} by {1}. Please install YCSB in this node"
+        except AttributeError:
+            warnings.warn("There were some attributes missing. Removing node in all possible parts of experiment",
+                          UserWarning)
