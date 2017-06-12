@@ -3,6 +3,7 @@ from os import makedirs
 from time import strftime
 import pickle
 from utils import vagrantg5k_util
+from utils.general_util import Put, Get, get_g5k_sites, g5k_configuration
 
 
 class VagrantExperiment:
@@ -41,6 +42,24 @@ class VagrantExperiment:
         except IOError:
             print "There is no preserved experiment at $HOME/.experiment"
 
+    def upload_frontends(self):
+        """
+        Upload the experiment to the frontends in case we want to execute it there
+        """
+        home = expanduser("~")
+        sitesg5k = [s + ".g5k" for s in get_g5k_sites()]
+        Put(sitesg5k,
+            [home + "/.experiment"],
+            connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+
+
+    def synchronise_with_frontend(self):
+        Get(self.frontend + '.g5k',
+            remote_files=[".experiment"],
+            local_location=expanduser("~") + "/.experiment",
+            connection_params={'user': g5k_configuration.get("g5k_user")}
+            ).run()
+
     def reserve_nodes(self):
         """
         Here we will call the vagrant up command and output the results
@@ -71,3 +90,4 @@ class VagrantExperiment:
 
     def clean_job(self):
         vagrantg5k_util.vagrant_destroy()
+

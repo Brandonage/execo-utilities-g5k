@@ -1,6 +1,8 @@
 from general_util import *
 import numpy as np
-from ast import literal_eval
+import json
+from aux_utilities.twilio_client import create_twilio_client
+
 
 def install_dcos_vagrant(nodes):
     install_vagrant(nodes)
@@ -74,12 +76,46 @@ def install_dcos_cli(nodes):
            "/usr/local/bin && sudo chmod +x /usr/local/bin/dcos && dcos config set core.dcos_url http://{{{host}}}",
            hosts=nodes).run()
 
-def install_cassandra(masternode,ncassandra,nseeds):
+
+def query_marathon_api(node, request):
+    """
+    Query the marathon API from a node and 
+    :param node: the node from where to do the query
+    :param request: the type of request
+    """
+    p = SshProcess("curl -H \"Authorization: token=$AUTH_TOKEN\" http://leader.mesos:8080/v2/" + request ,host=node)
+    p.run()
+    print p.stdout
+    d = json.loads(p.stdout)
+    return d
+
+
+def install_cassandra(masternode, ncassandra, nseeds):
     replace_infile(pathin="dcos-resources/cassandra-template.json",
                    pathout="dcos-resources/cassandra-config.json",
-                   replacements={"@ncassandra@":ncassandra,"@nseeds@":nseeds}
+                   replacements={"@ncassandra@": ncassandra, "@nseeds@": nseeds}
                    )
-    Put(hosts=masternode,local_files=["dcos-resources/cassandra-config.json"]).run()
+    Put(hosts=masternode, local_files=["dcos-resources/cassandra-config.json"]).run()
+    raw_input("Please install Cassandra Service with the following command:"
+              "dcos package install --yes --options=cassandra-config.json cassandra  "
+              "A message will be sent when everything is ready: ")
+    not_ready = True
+    while (not_ready):
+        p = SshProcess("curl -H \"Authorization: token=$AUTH_TOKEN\" http://leader.mesos/service/cassandra/v1/plan",
+                       host=masternode
+                       )
+        p.run()
+        print p.stdout
+        d = json.loads(p.stdout)
+        status = d.get("status")
+        if (status=='COMPLETE'):
+            not_ready = False
+        sleep(10)
+    client, dest_phone, orig_phone = create_twilio_client()
+    if client is not None:
+        client.messages.create(to=dest_phone, from_=orig_phone,
+                                   body="The Cassandra Cluster is ready. Please install CLI")
+    print "THE CASSANDRA CLUSTER IS READY!!"
     # print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
     #     .format(list(masternode))
     # print "And this: dcos package install cassandra --cli"
@@ -99,10 +135,5 @@ def install_cassandra(masternode,ncassandra,nseeds):
                    host=masternode)
     p.run()
     print p.stdout
-    d = literal_eval(p.stdout)
-    return set([s.replace(':9042','') for s in d['address']]) # we remove the port since we will pass this to the YCSB
-
-
-
-
-
+    d = json.loads(p.stdout)
+    return set([s.replace(':9042', '') for s in d['address']])  # we remove the port since we will pass this to the YCSB

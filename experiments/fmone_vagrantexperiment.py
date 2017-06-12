@@ -43,20 +43,22 @@ class FmoneVagrantExperiment(VagrantExperiment):
         nbootstrap = 1
         # before calling vagrant up lets check if the number of agents and masters equals the nodes specified
         if (sum([r[0] for r in self.resources])) != (
-                    nbootstrap + self.nmasters + self.npublic_agents + self.nprivate_agents):
+                            nbootstrap + self.nmasters + self.npublic_agents + self.nprivate_agents):
             raise ValueError("The number of VM's is not the same as bootstrap + masters + publicagents + privateagents")
         else:
             VagrantExperiment.reserve_nodes(self)
+
+    def split_dcos_roles(self):
+        # First, split the roles
+        self.bootstrap, self.masters, self.public_agents, self.private_agents = dcos_util.split_dcos_roles(
+            self.nodesDF, self.nmasters, self.npublic_agents, self.nprivate_agents
+        )
 
     def install(self):
         # TODO: THIS SHOULD ALL GO INTO THE DCOS_UTIL FILE AS A FUNCTION "INSTALL DCOS"
         # E.G INSTALL_DCOS(NODESDF,NMASTERS,NPAGENTS,NPRIVAGENTS)
         config_yaml_output = "dcos-resources/config.yaml"
         ip_detect_file = "dcos-resources/ip-detect"
-        # First, split the roles
-        self.bootstrap, self.masters, self.public_agents, self.private_agents = dcos_util.split_dcos_roles(
-            self.nodesDF, self.nmasters, self.npublic_agents, self.nprivate_agents
-        )
         # We need the dns resolver that the nodes use
         self.dns_resolver = general_util.get_dns_server(self.nodesDF.head(1)['ip'][0])
         # With all this information we build the config.yaml file necessary for the installation
@@ -135,13 +137,19 @@ class FmoneVagrantExperiment(VagrantExperiment):
 
     def install_cassandra(self, ncassandra, nseeds):
         master = list(self.masters)[0]
-        master_name = self.nodesDF[self.nodesDF['ip'] == master].name.values[0]
-        print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
-            .format(master_name)
-        print "And this: dcos package install cassandra --cli"
-        raw_input("After executing press enter: ")
+        # print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra" \
+        #     .format(master_name)
+        # print "And this: dcos package install cassandra --cli"
+        # raw_input("After executing press enter: ")
         self.cassandra_nodes = dcos_util.install_cassandra(masternode=master, ncassandra=ncassandra,
                                                            nseeds=nseeds)
+        general_util.Put(local_files=["aux_utilities/ycsb_init.cql"],
+                         hosts=self.cassandra_nodes).run()
+        general_util.Remote(
+            cmd="sudo docker run -v /home/vagrant:/home/vagrant cassandra:3.10 cqlsh -f /home/vagrant/ycsb_init.cql {{{host}}}",
+            hosts=list(self.cassandra_nodes)[0],
+            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
+        ).run()
 
     def ycsb_install(self):
         # We will install yscb only in one node per region
@@ -155,15 +163,20 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
                                             cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
 
-    def ycsb_run(self, iterations, res_dir, workload, recordcount, threadcount):
+    def ycsb_run(self, iterations, res_dir, workloads, recordcount, threadcount):
         # we build a list of single elements sets with the nodes that will run the yscb workload
+        """
+        Run a series of workloads a number of iterations and save the results in a directory
+        :param iterations: the number of times to execute each workload
+        :param res_dir: the directory in which to store the results
+        :param workloads: the different workloads that we want to execute
+        :param recordcount: the number of records that will be inserted
+        :param threadcount: the number of threads for each client
+        """
         yscb_clients = self.cassandra_ycsb.install_nodes
         # create a directory for the results
-        recordcount="1000"
-        threadcount="1"
-        workloads = ["workloada", "workloadb", "workloade", "workloadf"]
+        general_util.Remote(cmd="mkdir " + res_dir, hosts=yscb_clients).run()
         for workload in workloads:
-            general_util.Remote(cmd="mkdir " + res_dir, hosts=yscb_clients).run()
             self.cassandra_ycsb.load_workload(from_node=yscb_clients,
                                               workload=workload,
                                               recordcount=recordcount,
@@ -175,29 +188,29 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                                  workload=workload,
                                                  threadcount=threadcount)
 
-    def add_delay(self,delay,bandwidth):
+    def add_delay(self, delay, bandwidth):
         general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwidth)
         general_util.create_delay_qdisc(nodes=self.private_agents,
                                         netem_idx="10",
                                         delay=delay,
                                         jitter="0.1ms",
-                                        packet_loss="0.1%")
+                                        packet_loss="0.5%")
         for (orig_region, dest_region) in permutations(self.regions, 2):
             general_util.add_delay_between_regions(orig_region, dest_region, netem_idx="10")
 
     def run_fmone_pipeline(self):
-        fmone_util.execute_pipeline("central_ycsb", {"@nslaves@": str(self.private_agents.__len__()), "@region@": "central"},
+        fmone_util.execute_pipeline("central_ycsb",
+                                    {"@nslaves@": str(self.private_agents.__len__()), "@region@": "central"},
                                     self.masters, general_util.default_connection_params)
 
     def save_results(self):
         VagrantExperiment.save_results(self)
         yscb_clients = self.cassandra_ycsb.install_nodes
         general_util.Get(hosts=yscb_clients,
-                         remote_files=["with_fmone","no_fmone"],
+                         remote_files=["with_fmone", "no_fmone"],
                          local_location=self.results_directory).run()
 
-    def analyse_results(self):
-        workloads = ["workloada", "workloadb"]
+    def analyse_results(self, workloads):
         directories = ["/with_fmone", "/no_fmone"]
         results = {}
         for d in directories:
@@ -205,21 +218,21 @@ class FmoneVagrantExperiment(VagrantExperiment):
                 list_of_metrics, metrics_mean = self.cassandra_ycsb.analyse_output(directory=self.results_directory + d,
                                                                                    workload=w,
                                                                                    metric="Throughput")
-                results[w + d] = (list_of_metrics,metrics_mean)
-                print "For workload {0} and {1} the mean throughput is: {2}".format(w,d,metrics_mean)
+                results[w + d] = (list_of_metrics, metrics_mean)
+                print "For workload {0} and {1} the mean throughput is: {2}".format(w, d, metrics_mean)
 
-    def remove_node(self,node):
+    def remove_node(self, node):
         """
         Use this method to remove a node from the experiment
         """
         i = 0
-        for set_nodes in self.regions: # for each region
-            if node in set_nodes: # if the node is in the region
-                self.regions[i].remove(node) # we remove it
-                region = self.regions[i] # and we save the region to find a replacement for the substituted one
-            i=i+1
+        for set_nodes in self.regions:  # for each region
+            if node in set_nodes:  # if the node is in the region
+                self.regions[i].remove(node)  # we remove it
+                region = self.regions[i]  # and we save the region to find a replacement for the substituted one
+            i = i + 1
         try:
-            self.nodesDF = self.nodesDF[self.nodesDF['ip']!= node]
+            self.nodesDF = self.nodesDF[self.nodesDF['ip'] != node]
             self.nodes.remove(node)
             self.private_agents.remove(node)
             self.cassandra_nodes.remove(node)
@@ -230,4 +243,3 @@ class FmoneVagrantExperiment(VagrantExperiment):
         except AttributeError:
             warnings.warn("There were some attributes missing. Removing node in all possible parts of experiment",
                           UserWarning)
-

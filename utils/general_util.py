@@ -199,7 +199,7 @@ def limit_bandwith_qdisc(nodes, netem_idx, cap_rate="86Mbit"):
     ).run()
     # sudo tc qdisc add dev eth0 root handle 1: htb
     Remote(
-        "sudo tc class add dev eth0 parent 1: classid 1:{0} htb rate {1}"
+        "sudo tc class add dev eth0 parent 1: classid 1:{0} htb rate {1} ceil {1}"
             .format(netem_idx, cap_rate), hosts=nodes
     ).run()
     # sudo tc class add dev eth0 parent 1: classid 1:netem_idx htb rate cap_rate
@@ -255,3 +255,12 @@ def check_if_file_exists(file_name, nodes):
     r.run()
     not_ok = filter(lambda p: p.ok is not True, r.processes)
     return set([node.host.address for node in not_ok])
+
+
+def upload_to_frontends(filepath, g5k_dest_path):
+    sitesg5k = [s + ".g5k" for s in get_g5k_sites()]
+    Put(sitesg5k,
+        local_files=[filepath],
+        remote_location="/home/abrandon/public",
+        connection_params={'user': g5k_configuration.get("g5k_user")}
+        ).run()

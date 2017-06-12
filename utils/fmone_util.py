@@ -31,14 +31,16 @@ def execute_pipeline(type_of_pipeline,replacements,nodes,connection_params):
     :param node: the node from where we will curl the json
     :param connection_params: we need the connection parameters from an execo environment. e.g. vagrant, g5k, amazon...
     """
+    curl_node = list(nodes)[0] # this is the node from where we will perform the curl. It's one of the masters
     build_json_pipeline(type_of_pipeline, replacements)
-    curl_node = {list(nodes)[0]} # this is the node from where we will perform the curl. It's one of the masters
-    Put(hosts=curl_node, local_files=["fmone-resources/exec.json"],
-                     remote_location="/home/vagrant/exec.json",connection_params=connection_params).run()
-    p = Remote('curl -X POST "http://marathon-user.marathon.mesos:10000/v2/groups" -H "content-type: application/json" ' +
-           '-d@/home/vagrant/exec.json',hosts=curl_node,connection_params=connection_params).run()
-    print p.processes[0].stdout
-    print p.processes[0].stderr
+    Put(hosts=curl_node,
+        local_files=["fmone-resources/exec.json"],
+        remote_location="/home/vagrant/exec.json",connection_params=connection_params).run()
+    p = SshProcess('curl -X POST "http://leader.mesos/service/marathon-user/v2/groups" -H "content-type: application/json" -d@/home/vagrant/exec.json',
+                   host=curl_node,
+                   connection_params=connection_params).run()
+    print p.stdout
+    print p.stderr
 
 
 
