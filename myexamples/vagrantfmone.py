@@ -12,7 +12,7 @@ from aux_utilities.twilio_client import create_twilio_client
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = [(8,2,4)]
+    dict = [(10,2,4)]
     walltime = "3:25:00"
     experiment_name="dcosvagrant"
     frontend="rennes"

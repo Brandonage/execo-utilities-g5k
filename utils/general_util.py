@@ -11,6 +11,7 @@ from pandas import DataFrame
 from aux_utilities.custom_output_handler import PyConsoleOutputHandler
 import warnings
 import sys
+from os.path import expanduser
 
 bytes_in_gigabyte = 1073741824  ## The number of bytes in one gigabyte
 bytes_in_megabyte = 1048576
@@ -264,3 +265,27 @@ def upload_to_frontends(filepath, g5k_dest_path):
         remote_location="/home/abrandon/public",
         connection_params={'user': g5k_configuration.get("g5k_user")}
         ).run()
+
+def prepare_utilities():
+    """
+    This function prepare all the files needed for the utilities to work on the front ends
+    """
+    sitesg5k = [s + ".g5k" for s in get_g5k_sites()]
+    # First
+    Remote("mkdir .vagrant.d",
+           hosts=sitesg5k,
+           connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+    Put(sitesg5k,
+        local_files=[expanduser("~") + "/.vagrant.d/insecure_private_key"],
+        remote_location="/home/" + g5k_configuration.get("g5k_user") + "/.vagrant.d",
+        connection_params={'user': g5k_configuration.get("g5k_user")}
+        ).run()
+    Remote("curl -O https://repo.continuum.io/archive/Anaconda2-4.4.0-Linux-x86_64.sh",
+           hosts=sitesg5k,
+           connection_params={'user': g5k_configuration.get("g5k_user")}).run()
+    print "Install anaconda by executing bash Anaconda2-4.4.0-Linux-x86_64.sh on the frontends of choice"
+    print "You also need to install some dependencies. Execute conda activate root and pip install:" \
+          "jsonpath_rw, twilio, execo"
+
+
+
