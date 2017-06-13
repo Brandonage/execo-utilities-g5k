@@ -193,6 +193,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                                  res_dir=res_dir,
                                                  from_node=yscb_clients,
                                                  workload=workload,
+                                                 recordcount=recordcount,
                                                  threadcount=threadcount,
                                                  fieldlength=fieldlength,
                                                  target=target)
