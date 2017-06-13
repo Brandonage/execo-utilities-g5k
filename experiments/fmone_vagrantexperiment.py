@@ -2,10 +2,16 @@ from utils import dcos_util
 from utils import fmone_util
 from experiments.vagrantexperiment import VagrantExperiment
 from utils import general_util
-from os.path import expanduser
+from os.path import exists, expanduser
+from os import makedirs
 from itertools import permutations
 import sys
 import warnings
+from time import strftime
+import json
+from distutils.dir_util import copy_tree
+from shutil import rmtree
+
 
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
 
@@ -163,7 +169,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
                                             cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
 
-    def ycsb_run(self, iterations, res_dir, workloads, recordcount, threadcount):
+    def ycsb_run(self, iterations, res_dir, workloads, recordcount, threadcount, fieldlength, target):
         # we build a list of single elements sets with the nodes that will run the yscb workload
         """
         Run a series of workloads a number of iterations and save the results in a directory
@@ -180,13 +186,16 @@ class FmoneVagrantExperiment(VagrantExperiment):
             self.cassandra_ycsb.load_workload(from_node=yscb_clients,
                                               workload=workload,
                                               recordcount=recordcount,
-                                              threadcount=threadcount)
+                                              threadcount=threadcount,
+                                              fieldlength=fieldlength)
             for i in range(iterations):
                 self.cassandra_ycsb.run_workload(iteration=i,
                                                  res_dir=res_dir,
                                                  from_node=yscb_clients,
                                                  workload=workload,
-                                                 threadcount=threadcount)
+                                                 threadcount=threadcount,
+                                                 fieldlength=fieldlength,
+                                                 target=target)
 
     def add_delay(self, delay, bandwidth):
         general_util.limit_bandwith_qdisc(nodes=self.private_agents, netem_idx="10", cap_rate=bandwidth)
@@ -209,6 +218,9 @@ class FmoneVagrantExperiment(VagrantExperiment):
         general_util.Get(hosts=yscb_clients,
                          remote_files=["with_fmone", "no_fmone"],
                          local_location=self.results_directory).run()
+        copy_tree(".netcheck", self.results_directory)
+        rmtree(".netcheck")
+
 
     def analyse_results(self, workloads):
         directories = ["/with_fmone", "/no_fmone"]
@@ -243,3 +255,29 @@ class FmoneVagrantExperiment(VagrantExperiment):
         except AttributeError:
             warnings.warn("There were some attributes missing. Removing node in all possible parts of experiment",
                           UserWarning)
+
+    def checkpoint_network(self):
+        """
+        This method will export to a temporary directory the state of the network interface for the node that is running
+        the u'/fmoncentralpipecentral/mongoccentral/mongocentralcentral' task. We do this to check how much traffic does
+        the central node receives with a centralised approach
+        """
+        netcheck_directory = ".netcheck"
+        curl_node = list(self.masters)[0]
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                    host=curl_node).run()
+        d = json.loads(p.stdout)
+        mongo_tasks = filter(lambda task: task['appId'] == u'/fmoncentralpipecentral/mongoccentral/mongocentralcentral',
+               d.get('tasks'))
+        mongo_host = mongo_tasks[0]['host']
+        p = general_util.SshProcess('/sbin/ifconfig',
+                                    host=mongo_host,
+                                    shell=True,
+                                    pty=True).run()
+        now = strftime("%d_%b_%Y_%H:%M")
+        if not exists(netcheck_directory):
+            makedirs(netcheck_directory)
+        with open('.netcheck/net_checkpoint' + now,'w') as f:
+            f.write(p.stdout)
+
+

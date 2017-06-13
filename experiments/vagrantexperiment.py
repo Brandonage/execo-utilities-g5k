@@ -38,6 +38,11 @@ class VagrantExperiment:
             input = open(home + "/.experiment", "rb")
             experiment = pickle.load(input)
             input.close()
+            # we need to also change the results directory if we want to reload the experiment on a frontend
+            home = expanduser("~")
+            now = strftime("%d_%b_%Y_%H:%M")
+            # directory to store results of experiment
+            experiment.results_directory = home + "/execo_experiments/" + experiment.experiment_name + "__" + now
             return experiment
         except IOError:
             print "There is no preserved experiment at $HOME/.experiment"

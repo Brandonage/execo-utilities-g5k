@@ -101,6 +101,7 @@ def install_cassandra(masternode, ncassandra, nseeds):
               "A message will be sent when everything is ready: ")
     not_ready = True
     while (not_ready):
+        sleep(10)
         p = SshProcess('curl "http://leader.mesos/service/cassandra/v1/plan"',
                        host=masternode
                        )
@@ -110,11 +111,6 @@ def install_cassandra(masternode, ncassandra, nseeds):
         status = d.get("status")
         if (status=='COMPLETE'):
             not_ready = False
-        sleep(10)
-    client, dest_phone, orig_phone = create_twilio_client()
-    if client is not None:
-        client.messages.create(to=dest_phone, from_=orig_phone,
-                                   body="The Cassandra Cluster is ready. Please install CLI")
     print "THE CASSANDRA CLUSTER IS READY!!"
     # print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra"\
     #     .format(list(masternode))

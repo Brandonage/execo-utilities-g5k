@@ -3,6 +3,7 @@ from subprocess import check_output
 from pandas import DataFrame
 
 home = expanduser("~")
+# we need an attribute that points to wherever the vagrant-g5k VagrantFile is
 vagrantgk5_path = home + "/vagrant-g5k/"  # This will be changed by the vagrantexperiment class too at creation time
 
 
