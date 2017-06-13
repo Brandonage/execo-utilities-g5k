@@ -101,7 +101,7 @@ def install_cassandra(masternode, ncassandra, nseeds):
               "A message will be sent when everything is ready: ")
     not_ready = True
     while (not_ready):
-        sleep(10)
+        sleep(80)
         p = SshProcess('curl "http://leader.mesos/service/cassandra/v1/plan"',
                        host=masternode
                        )

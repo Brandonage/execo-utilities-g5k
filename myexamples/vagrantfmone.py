@@ -43,7 +43,7 @@ if __name__ == '__main__':
     vagrantdcos_deployment.run_fmone_pipeline()
     sleep(380)
     vagrantdcos_deployment.checkpoint_network()
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "with_fmone",workloads=workloads, recordcount="8000",threadcount="3")
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "with_fmone",workloads=workloads, recordcount="8000",threadcount="3", fieldlength="1000", target="100")
     vagrantdcos_deployment.checkpoint_network()
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
