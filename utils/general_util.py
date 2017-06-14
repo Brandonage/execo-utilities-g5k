@@ -262,7 +262,7 @@ def upload_to_frontends(filepath, g5k_dest_path):
     sitesg5k = [s + ".g5k" for s in get_g5k_sites()]
     Put(sitesg5k,
         local_files=[filepath],
-        remote_location="/home/abrandon/public",
+        remote_location= g5k_dest_path,
         connection_params={'user': g5k_configuration.get("g5k_user")}
         ).run()
 

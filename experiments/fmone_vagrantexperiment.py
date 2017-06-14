@@ -1,5 +1,4 @@
-from utils import dcos_util
-from utils import fmone_util
+from utils import dcos_util, fmone_util, cassandra_util
 from experiments.vagrantexperiment import VagrantExperiment
 from utils import general_util
 from os.path import exists, expanduser
@@ -11,6 +10,7 @@ from time import strftime
 import json
 from distutils.dir_util import copy_tree
 from shutil import rmtree
+
 
 
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
@@ -35,6 +35,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
         dcos_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+        cassandra_util.default_connection_params['user'] = 'vagrant'
+        cassandra_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
 
     def reload_keys(self):
         """
@@ -44,6 +46,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
         dcos_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+        cassandra_util.default_connection_params['user'] = 'vagrant'
+        cassandra_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
 
     def reserve_nodes(self):
         nbootstrap = 1
@@ -141,7 +145,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                 hosts=self.regions[i]).run()
             print "The region {0} has the nodes: {1}".format(region_name, self.regions[i])
 
-    def install_cassandra(self, ncassandra, nseeds):
+    def install_cassandra_dcos(self, ncassandra, nseeds):
         master = list(self.masters)[0]
         # print "Execute this command in the machine {0}: dcos package install --yes --options=cassandra-config.json cassandra" \
         #     .format(master_name)
@@ -156,6 +160,28 @@ class FmoneVagrantExperiment(VagrantExperiment):
             hosts=list(self.cassandra_nodes)[0],
             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
         ).run()
+
+    def install_cassandra(self,ncassandra,nseeds):
+        """
+        install cassandra natively and spread the cassandra nodes equally across regions
+        :param ncassandra: the number of nodes
+        :param nseeds: the number of seeds
+        """
+        sample = int(ncassandra)/self.regions.__len__()
+        cassandra_nodes = []
+        for region in self.regions:
+            cassandra_nodes.extend(list(region)[:sample])
+        self.cassandra_nodes = cassandra_util.install_cassandra(nodes=set(cassandra_nodes),
+                                                                nseeds=int(nseeds),
+                                                                dc_name="test")
+        general_util.Put(local_files=["aux_utilities/ycsb_init.cql"],
+                         hosts=self.cassandra_nodes).run()
+        general_util.Remote(
+            cmd="sudo docker run -v /home/vagrant:/home/vagrant cassandra:3.10 cqlsh -f /home/vagrant/ycsb_init.cql {{{host}}}",
+            hosts=list(self.cassandra_nodes)[0],
+            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
+        ).run()
+
 
     def ycsb_install(self):
         # We will install yscb only in one node per region
