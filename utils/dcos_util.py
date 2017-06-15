@@ -67,13 +67,13 @@ def restart_dcos_mesos_slave(slaves):
            hosts=slaves).run()
 
 
-def install_dcos_cli(nodes):
+def install_dcos_cli(nodes,master):
     """
     Install DCOS in all nodes.
     :param masternode: The nodes where we want to install the cli. Normally all of them
     """
     Remote("curl https://downloads.dcos.io/binaries/cli/linux/x86-64/dcos-1.9/dcos -o dcos && sudo mv dcos " \
-           "/usr/local/bin && sudo chmod +x /usr/local/bin/dcos && dcos config set core.dcos_url http://{{{host}}}",
+           "/usr/local/bin && sudo chmod +x /usr/local/bin/dcos && dcos config set core.dcos_url http://" + master,
            hosts=nodes).run()
 
 

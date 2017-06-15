@@ -98,13 +98,13 @@ class FmoneVagrantExperiment(VagrantExperiment):
         general_util.Remote("sudo bash dcos_generate_config.sh --preflight",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        general_util.Remote("sudo bash dcos_generate_config.sh --deploy",
+        general_util.Remote("sudo bash dcos_generate_config.sh --deploy -v",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
         general_util.Remote("sudo bash dcos_generate_config.sh --postflight",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        dcos_util.install_dcos_cli(self.masters.union(self.private_agents))
+        dcos_util.install_dcos_cli(self.masters.union(self.private_agents),list(self.masters)[0])
         print "The bootstrap node is: {0}".format(','.join(list(self.bootstrap)))
         print "The masters are: {0}".format(','.join(list(self.masters)))
         print "The public agents are: {0}".format(','.join(list(self.public_agents)))
@@ -122,6 +122,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         self.regions = general_util.divide_nodes_into_regions(proportions,
                                                               list(self.private_agents.difference(central_region))
                                                               )
+        self.central_region = central_region
         # we now include the central region
         self.regions.append(central_region)
         for i in xrange(len(self.regions)):
@@ -167,13 +168,13 @@ class FmoneVagrantExperiment(VagrantExperiment):
         :param ncassandra: the number of nodes
         :param nseeds: the number of seeds
         """
-        sample = int(ncassandra)/self.regions.__len__()
-        cassandra_nodes = []
-        for region in self.regions:
-            cassandra_nodes.extend(list(region)[:sample])
-        self.cassandra_nodes = cassandra_util.install_cassandra(nodes=set(cassandra_nodes),
+        # sample = int(ncassandra)/self.regions.__len__()
+        # cassandra_nodes = []
+        # for region in self.regions:
+        #     cassandra_nodes.extend(list(region)[:sample])
+        self.cassandra_nodes = cassandra_util.install_cassandra(nodes=set(self.central_region),
                                                                 nseeds=int(nseeds),
-                                                                dc_name="test")
+                                                                dc_name="central_test")
         general_util.Put(local_files=["aux_utilities/ycsb_init.cql"],
                          hosts=self.cassandra_nodes).run()
         general_util.Remote(
@@ -185,9 +186,12 @@ class FmoneVagrantExperiment(VagrantExperiment):
 
     def ycsb_install(self):
         # We will install yscb only in one node per region
-        nodes_to_install = set([list(region)[0] for region in self.regions])
+        # nodes_to_install = set([list(region)[0] for region in self.regions])
+        regions_to_install = filter(lambda r: not r.issubset(self.central_region), self.regions)
+        nodes_to_install = set.union(*regions_to_install)
         # we move the ycsb benchmark that we rsynced to home in order for the CassandraYCSB class to take care of all
         #  the installation process
+        print "Uploading the YCSB tar"
         general_util.Put(local_files=[expanduser("~") + "/vagrant-g5k/resources/ycsb-0.12.0.tar.gz"],
                          hosts=nodes_to_install).run()
         general_util.install_JDK_8(nodes_to_install, os="centos")
@@ -254,7 +258,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         results = {}
         for d in directories:
             for w in workloads:
-                list_of_metrics, metrics_mean = self.cassandra_ycsb.analyse_output(directory=self.results_directory + d,
+                list_of_metrics, metrics_mean = self.cassandra_ycsb.analyse_results(directory=self.results_directory + d,
                                                                                    workload=w,
                                                                                    metric="Throughput")
                 results[w + d] = (list_of_metrics, metrics_mean)

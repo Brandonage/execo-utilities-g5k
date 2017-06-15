@@ -280,6 +280,11 @@ def prepare_utilities():
         remote_location="/home/" + g5k_configuration.get("g5k_user") + "/.vagrant.d",
         connection_params={'user': g5k_configuration.get("g5k_user")}
         ).run()
+    Put(sitesg5k,
+        local_files=[expanduser("~") + "/vagrant-g5k"],
+        remote_location="/home/" + g5k_configuration.get("g5k_user") + "/vagrant-g5k",
+        connection_params={'user': g5k_configuration.get("g5k_user")}
+        ).run()
     Remote("curl -O https://repo.continuum.io/archive/Anaconda2-4.4.0-Linux-x86_64.sh",
            hosts=sitesg5k,
            connection_params={'user': g5k_configuration.get("g5k_user")}).run()

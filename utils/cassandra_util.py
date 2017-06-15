@@ -24,7 +24,7 @@ def install_cassandra(nodes,nseeds,dc_name):
            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
            ).run()
         print "Started seed node {0}".format(seed)
-        sleep(10)
+        sleep(90)
     # and then the rest
     for node in nodes.difference(set(seeds)):
         Remote("sudo service cassandra start",
@@ -32,7 +32,7 @@ def install_cassandra(nodes,nseeds,dc_name):
            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
            ).run()
         print "Started node {0}".format(node)
-        sleep(30)
+        sleep(90)
     return nodes
 
 def upload_cassandra_yaml(node,seeds,dc_name):
