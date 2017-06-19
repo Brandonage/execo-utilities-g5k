@@ -30,13 +30,13 @@ if __name__ == '__main__':
     vagrantdcos_deployment.upload_frontends()
     vagrantdcos_deployment = FmoneVagrantExperiment.reload_experiment()
     vagrantdcos_deployment.reload_keys() # If we upload to the frontends we have to reload the keys
-    vagrantdcos_deployment.install_cassandra(ncassandra="6",nseeds="1")
+    vagrantdcos_deployment.install_cassandra(ncassandra="4",nseeds="1")
     # TODO: All of this should go into the run procedure
     vagrantdcos_deployment.ycsb_install()
     # Stop here. You have to prepare the cassandra DB
     vagrantdcos_deployment.add_delay(bandwidth="3Mbit",delay="50ms")
-    workloads = ["workloada","workloadc","workloade"]
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "no_fmone",workloads=workloads, recordcount="8000",threadcount="1", fieldlength="500", target="100")
+    workloads = ["workloada","workloadc"]
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "no_fmone",workloads=workloads, recordcount="8000",threadcount="1", fieldlength="500", target="100")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
         client.messages.create(to=dest_phone,from_=orig_phone,body="Starting the Fmone pipeline. Verify on DC/OS")

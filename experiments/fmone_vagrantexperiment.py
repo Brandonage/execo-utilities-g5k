@@ -164,7 +164,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
 
     def install_cassandra(self,ncassandra,nseeds):
         """
-        install cassandra natively and spread the cassandra nodes equally across regions
+        install cassandra natively and spread the cassandra nodes in the central region
         :param ncassandra: the number of nodes
         :param nseeds: the number of seeds
         """
