@@ -6,8 +6,8 @@
 			"apps":[
 				{ 
 					"id": "/fmonaggpipe@region@/rabbitmqr@region@/rabbitmqregion@region@",
-			  		"cpus": 0.2,
-			  		"mem": 200,
+			  		"cpus": 0.4,
+			  		"mem": 1024,
 			  		"container": {
 			    		"type": "DOCKER",
 			    		"docker": {

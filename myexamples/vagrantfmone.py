@@ -23,28 +23,35 @@ if __name__ == '__main__':
     vagrantdcos_deployment.reserve_nodes()
     vagrantdcos_deployment.deploy_nodes()
     vagrantdcos_deployment.split_dcos_roles()
-    vagrantdcos_deployment.install()
-    # I build the regions and I leave the last private node as the central region
-    vagrantdcos_deployment.build_regions(proportions=[50, 50], central_region=set(list(vagrantdcos_deployment.private_agents)[-4:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     vagrantdcos_deployment.upload_frontends()
     vagrantdcos_deployment = FmoneVagrantExperiment.reload_experiment()
     vagrantdcos_deployment.reload_keys() # If we upload to the frontends we have to reload the keys
+    vagrantdcos_deployment.install()
+    # I build the regions and I leave the last private node as the central region
+    vagrantdcos_deployment.build_regions(proportions=[50, 50], central_region=set(list(vagrantdcos_deployment.private_agents)[-4:]))
+    vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     vagrantdcos_deployment.install_cassandra(ncassandra="4",nseeds="1")
     # TODO: All of this should go into the run procedure
     vagrantdcos_deployment.ycsb_install()
     # Stop here. You have to prepare the cassandra DB
     vagrantdcos_deployment.add_delay(bandwidth="3Mbit",delay="50ms")
-    workloads = ["workloada","workloadc"]
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "no_fmone",workloads=workloads, recordcount="8000",threadcount="1", fieldlength="500", target="100")
+    workloads = ["workloadc","workloadd"]
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "no_fmone",workloads=workloads, recordcount="5000",threadcount="1", fieldlength="500", target="100")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
         client.messages.create(to=dest_phone,from_=orig_phone,body="Starting the Fmone pipeline. Verify on DC/OS")
     vagrantdcos_deployment.run_fmone_pipeline()
     sleep(380)
-    vagrantdcos_deployment.checkpoint_network()
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "with_fmone",workloads=workloads, recordcount="8000",threadcount="1", fieldlength="500", target="100")
-    vagrantdcos_deployment.checkpoint_network()
+    try:
+        vagrantdcos_deployment.checkpoint_network()
+    except:
+        print "Not possible to checkpoint the network usage"
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "with_fmone",workloads=workloads, recordcount="5000",threadcount="1", fieldlength="500", target="100")
+    try:
+        vagrantdcos_deployment.checkpoint_network()
+    except:
+        print "Not possible to checkpoint the network usage"
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
 
