@@ -6,8 +6,8 @@
 			"apps":[
 				{
 					"id": "/fmoncentralpipe@region@/mongoc@region@/mongocentral@region@",
-			  		"cpus": 0.4,
-			  		"mem": 1024,
+			  		"cpus": 0.5,
+			  		"mem": 2048,
 			  		"container": {
 			    		"type": "DOCKER",
 			    		"docker": {

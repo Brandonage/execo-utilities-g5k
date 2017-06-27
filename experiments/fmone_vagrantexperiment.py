@@ -10,8 +10,7 @@ from time import strftime
 import json
 from distutils.dir_util import copy_tree
 from shutil import rmtree
-
-
+from glob import glob
 
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
 
@@ -104,7 +103,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         general_util.Remote("sudo bash dcos_generate_config.sh --postflight",
                             hosts=self.bootstrap,
                             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        dcos_util.install_dcos_cli(self.masters.union(self.private_agents),list(self.masters)[0])
+        dcos_util.install_dcos_cli(self.masters.union(self.private_agents), list(self.masters)[0])
         print "The bootstrap node is: {0}".format(','.join(list(self.bootstrap)))
         print "The masters are: {0}".format(','.join(list(self.masters)))
         print "The public agents are: {0}".format(','.join(list(self.public_agents)))
@@ -162,7 +161,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
         ).run()
 
-    def install_cassandra(self,ncassandra,nseeds):
+    def install_cassandra(self, ncassandra, nseeds):
         """
         install cassandra natively and spread the cassandra nodes in the central region
         :param ncassandra: the number of nodes
@@ -183,7 +182,6 @@ class FmoneVagrantExperiment(VagrantExperiment):
             process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
         ).run()
 
-
     def ycsb_install(self):
         # We will install yscb only in one node per region
         # nodes_to_install = set([list(region)[0] for region in self.regions])
@@ -199,6 +197,17 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
                                             cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
 
+    def ycsb_install_regions(self,regions):
+        # we move the ycsb benchmark that we rsynced to home in order for the CassandraYCSB class to take care of all
+        #  the installation process
+        print "Uploading the YCSB tar"
+        general_util.Put(local_files=[expanduser("~") + "/vagrant-g5k/resources/ycsb-0.12.0.tar.gz"],
+                         hosts=regions).run()
+        general_util.install_JDK_8(regions, os="centos")
+        self.cassandra_ycsb = CassandraYCSB(install_nodes=regions,
+                                            execo_conn_params=general_util.default_connection_params,  # needed by execo
+                                            cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
+
     def ycsb_run(self, iterations, res_dir, workloads, recordcount, threadcount, fieldlength, target):
         # we build a list of single elements sets with the nodes that will run the yscb workload
         """
@@ -211,7 +220,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         """
         yscb_clients = self.cassandra_ycsb.install_nodes
         # create a directory for the results
-        general_util.Remote(cmd="mkdir " + res_dir, hosts=yscb_clients).run()
+        general_util.Remote(cmd="mkdir results", hosts=yscb_clients).run()
+        general_util.Remote(cmd="mkdir results/" + res_dir, hosts=yscb_clients).run()
         for workload in workloads:
             self.cassandra_ycsb.load_workload(from_node=yscb_clients,
                                               workload=workload,
@@ -220,7 +230,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                               fieldlength=fieldlength)
             for i in range(iterations):
                 self.cassandra_ycsb.run_workload(iteration=i,
-                                                 res_dir=res_dir,
+                                                 res_dir="results/" + res_dir,
                                                  from_node=yscb_clients,
                                                  workload=workload,
                                                  recordcount=recordcount,
@@ -238,31 +248,31 @@ class FmoneVagrantExperiment(VagrantExperiment):
         for (orig_region, dest_region) in permutations(self.regions, 2):
             general_util.add_delay_between_regions(orig_region, dest_region, netem_idx="10")
 
-    def run_fmone_pipeline(self):
-        fmone_util.execute_pipeline("central_ycsb",
-                                    {"@nslaves@": str(self.private_agents.__len__()), "@region@": "central"},
-                                    self.masters, general_util.default_connection_params)
+    def run_fmone_pipeline(self,pipeline_type,slaves,region):
+        fmone_util.execute_pipeline(pipeline_type,
+                                        {"@nslaves@": slaves, "@region@": region},
+                                        self.masters, general_util.default_connection_params)
 
     def save_results(self):
         VagrantExperiment.save_results(self)
         yscb_clients = self.cassandra_ycsb.install_nodes
         general_util.Get(hosts=yscb_clients,
-                         remote_files=["with_fmone", "no_fmone"],
+                         remote_files=["results"],
                          local_location=self.results_directory).run()
         copy_tree(".netcheck", self.results_directory)
         rmtree(".netcheck")
 
-
     def analyse_results(self, workloads):
-        directories = ["/with_fmone", "/no_fmone"]
+        directories = [folder for folder in glob(self.results_directory + '/results/*')]
         results = {}
         for d in directories:
             for w in workloads:
-                list_of_metrics, metrics_mean = self.cassandra_ycsb.analyse_results(directory=self.results_directory + d,
-                                                                                   workload=w,
-                                                                                   metric="Throughput")
-                results[w + d] = (list_of_metrics, metrics_mean)
-                print "For workload {0} and {1} the mean throughput is: {2}".format(w, d, metrics_mean)
+                list_of_metrics, metrics_mean, metrics_var = self.cassandra_ycsb.analyse_results(
+                    directory=d,
+                    workload=w,
+                    metric="Throughput")
+                results[w + d] = (list_of_metrics, metrics_mean, metrics_var)
+                print "For workload {0} and {1} the mean throughput is: {2} and variance is {3}".format(w, d, metrics_mean, metrics_var)
 
     def remove_node(self, node):
         """
@@ -299,7 +309,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                     host=curl_node).run()
         d = json.loads(p.stdout)
         mongo_tasks = filter(lambda task: task['appId'] == u'/fmoncentralpipecentral/mongoccentral/mongocentralcentral',
-               d.get('tasks'))
+                             d.get('tasks'))
         mongo_host = mongo_tasks[0]['host']
         p = general_util.SshProcess('/sbin/ifconfig',
                                     host=mongo_host,
@@ -308,7 +318,26 @@ class FmoneVagrantExperiment(VagrantExperiment):
         now = strftime("%d_%b_%Y_%H:%M")
         if not exists(netcheck_directory):
             makedirs(netcheck_directory)
-        with open('.netcheck/net_checkpoint' + now,'w') as f:
+        with open('.netcheck/net_checkpoint' + now, 'w') as f:
             f.write(p.stdout)
 
 
+if __name__ == '__main__':
+    home = "/Users/alvarobrandon/execo_experiments"
+    experiments = ['/toma_buena_workloadf_Jun_2017_12:25',
+                   '/toma_buena_workloade_23_Jun_2017',
+                   '/toma_buena_workloadinsert_26_Jun_2017_12:05',
+                   '/toma_buena_workload_update_26_Jun_2017_13:52',
+                   '/toma_buena_workloada_y_b_21_Jun_2017_11:53',
+                   '/toma_buena_workloadc_y_d_21_Jun_2017_15:58']
+    directories = ["/with_fmone", "/no_fmone"]
+    workloads = ["workloada", "workloadb", "workloadc", "workloadd", "workloade", "workloadf"]
+    results = {}
+    for exp in experiments:
+        for d in directories:
+            for w in workloads:
+                list_of_metrics, metrics_mean, metrics_var = CassandraYCSB.analyse_results(directory=home + exp + d,
+                                                                              workload=w,
+                                                                              metric="Throughput")
+                results[w + d] = (list_of_metrics, metrics_mean, metrics_var)
+                print "For experiment {0} workload {1} and {2} the mean throughput is: {3} and variance {4}".format(exp, w, d, metrics_mean, metrics_var)

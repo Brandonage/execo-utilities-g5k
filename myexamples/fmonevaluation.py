@@ -7,9 +7,6 @@ from aux_utilities.twilio_client import create_twilio_client
 
 
 
-
-
-
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
     dict = [(15,2,4)]
@@ -29,31 +26,52 @@ if __name__ == '__main__':
     vagrantdcos_deployment.reload_keys() # If we upload to the frontends we have to reload the keys
     vagrantdcos_deployment.install()
     # I build the regions and I leave the last private node as the central region
-    vagrantdcos_deployment.build_regions(proportions=[50, 50], central_region=set(list(vagrantdcos_deployment.private_agents)[-4:]))
+    vagrantdcos_deployment.build_regions(proportions=[20,40,40], central_region=set(list(vagrantdcos_deployment.private_agents)[-3:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
-    vagrantdcos_deployment.install_cassandra(ncassandra="4",nseeds="1")
+    vagrantdcos_deployment.install_cassandra(ncassandra="3",nseeds="1")
     # TODO: All of this should go into the run procedure
-    vagrantdcos_deployment.ycsb_install()
+    # We will install yscb in all the regions but the first one and central. First one is going to have the backends. Central the Cassandra cluster
+    regions_to_install = filter(lambda r: not r.issubset(vagrantdcos_deployment.central_region) and
+                                          not r.issubset(vagrantdcos_deployment.regions[0]),
+                                vagrantdcos_deployment.regions)
+    nodes_to_install = set.union(*regions_to_install)
+    vagrantdcos_deployment.ycsb_install_regions(nodes_to_install)
     # Stop here. You have to prepare the cassandra DB
     vagrantdcos_deployment.add_delay(bandwidth="3Mbit",delay="50ms")
-    workloads = ["workloada"]
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "no_fmone",workloads=workloads, recordcount="5000",threadcount="1", fieldlength="500", target="100")
+    workloads = ["workloada","workloadb","workloadc"]
+    # baseline pipeline. Monitor all the nodes and send the data to some fmoneagents on region 0
+    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="baseline",
+                                              slaves=str(vagrantdcos_deployment.private_agents.__len__()),
+                                              region="0")
+    sleep(180)
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "baseline",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
-        client.messages.create(to=dest_phone,from_=orig_phone,body="Starting the Fmone pipeline. Verify on DC/OS")
-    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="central_ycsb")
+        client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
+    sleep(100)
+    i = 0
+    for r in vagrantdcos_deployment.regions[:-1]: # all but the central region
+        vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="regional_mongo",
+                                                  slaves=str(r.__len__()),
+                                                  region=str(i))
+        i=i+1
     sleep(380)
-    try:
-        vagrantdcos_deployment.checkpoint_network()
-    except:
-        print "Not possible to checkpoint the network usage"
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "with_fmone",workloads=workloads, recordcount="5000",threadcount="1", fieldlength="500", target="100")
-    try:
-        vagrantdcos_deployment.checkpoint_network()
-    except:
-        print "Not possible to checkpoint the network usage"
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "regional",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
+    client, dest_phone, orig_phone = create_twilio_client()
+    if client is not None:
+        client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
+    sleep(100)
+    i = 0
+    for r in vagrantdcos_deployment.regions[:-1]: # all but the central region
+        vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="aggregate",
+                                                  slaves=str(r.__len__()),
+                                                  region=str(i))
+        i=i+1
+    sleep(380)
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "local_mongos",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
+
 
 
 # DESCRIPTION OF YCSB WORKLOADS #
