@@ -1,0 +1,71 @@
+{
+	"id": "/fmoncentralpipekafka",
+	"groups": [
+		{
+			"id": "/fmoncentralpipekafka/fmon-allregions-host",
+			"apps":[
+				{
+					"id": "/fmoncentralpipekafka/fmon-allregions-host/fmoneagent-allregions-host",
+			  		"cpus": 0.5,
+					"mem": 200,
+					"container": {
+					  "type": "DOCKER",
+					  "docker": {
+					    "network": "HOST",
+					    "image": "alvarobrandon/fmone-agent",
+					    "forcePullImage": true
+					  },
+					"volumes": [
+					    {
+					      "containerPath": "/proc_host",
+					      "hostPath": "/proc",
+					      "mode": "RO"
+					    },
+						{
+						  "containerPath" : "/var/run/docker.sock",
+						  "hostPath": "/var/run/docker.sock",
+						  "mode": "RO"
+						}
+					  ]
+					},
+					"args": ["1","1","host","inout","kafka","--kafka_bootstrap_out","10.144.47.140:9412","--kafka_topic_out","fmone"],
+					"instances": @nslaves@,
+					"constraints": [["hostname", "UNIQUE"]]
+				}
+			]
+		},
+        {
+			"id": "/fmoncentralpipekafka/fmon-allregions-docker",
+			"apps":[
+				{
+					"id": "/fmoncentralpipekafka/fmon-allregions-docker/fmoneagent-allregions-docker",
+			  		"cpus": 0.5,
+					"mem": 200,
+					"container": {
+					  "type": "DOCKER",
+					  "docker": {
+					    "network": "HOST",
+					    "image": "alvarobrandon/fmone-agent",
+					    "forcePullImage": true
+					  },
+					"volumes": [
+					    {
+					      "containerPath": "/proc_host",
+					      "hostPath": "/proc",
+					      "mode": "RO"
+					    },
+						{
+						  "containerPath" : "/var/run/docker.sock",
+						  "hostPath": "/var/run/docker.sock",
+						  "mode": "RO"
+						}
+					  ]
+					},
+					"args": ["1","1","docker","inout","kafka","--kafka_bootstrap_out","10.144.47.140:9412","--kafka_topic_out","fmone"],
+					"instances": @nslaves@,
+					"constraints": [["hostname", "UNIQUE"]]
+				}
+			]
+		}
+	]
+}

@@ -89,7 +89,9 @@ def query_marathon_api(node, request):
     d = json.loads(p.stdout)
     return d
 
-
+"""
+This will install cassandra in the way DCOS does. Through a JSON file and then through the command line
+"""
 def install_cassandra(masternode, ncassandra, nseeds):
     replace_infile(pathin="dcos-resources/cassandra-template.json",
                    pathout="dcos-resources/cassandra-config.json",

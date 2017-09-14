@@ -9,14 +9,14 @@ from aux_utilities.twilio_client import create_twilio_client
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = [(15,2,4)]
+    dict = [(7,4,10)] # the format is nnodes,cores,GB
     walltime = "3:25:00"
     experiment_name="dcosvagrant"
-    frontend="rennes"
-    description="This is a deployment using vagrant_g5k and DCOS"
+    frontend="nancy"
+    description="This experiment evaluates the elasticity of Fmone"
     vagrantdcos_deployment = FmoneVagrantExperiment(frontend=frontend, resources=dict, walltime=walltime,
                                                     experiment_name=experiment_name, description=description, nmasters=1,
-                                                    nprivate_agents=12, npublic_agents=1)
+                                                    nprivate_agents=4, npublic_agents=1)
     vagrantdcos_deployment.reserve_nodes()
     vagrantdcos_deployment.deploy_nodes()
     vagrantdcos_deployment.split_dcos_roles()
@@ -25,52 +25,69 @@ if __name__ == '__main__':
     vagrantdcos_deployment = FmoneVagrantExperiment.reload_experiment()
     vagrantdcos_deployment.reload_keys() # If we upload to the frontends we have to reload the keys
     vagrantdcos_deployment.install()
-    # I build the regions and I leave the last private node as the central region
-    vagrantdcos_deployment.build_regions(proportions=[20,40,40], central_region=set(list(vagrantdcos_deployment.private_agents)[-3:]))
+    # I build the regions and I leave an ncentral number of private node as the central region
+    ncentral = 1
+    vagrantdcos_deployment.build_regions(proportions=[100], central_region=set(list(vagrantdcos_deployment.private_agents)[-ncentral:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
-    vagrantdcos_deployment.install_cassandra(ncassandra="3",nseeds="1")
+    vagrantdcos_deployment.install_cassandra(ncassandra=str(ncentral),nseeds="1")
     # TODO: All of this should go into the run procedure
-    # We will install yscb in all the regions but the first one and central. First one is going to have the backends. Central the Cassandra cluster
-    regions_to_install = filter(lambda r: not r.issubset(vagrantdcos_deployment.central_region) and
-                                          not r.issubset(vagrantdcos_deployment.regions[0]),
+    # We will install yscb in all the regions but the central one.
+    regions_to_install = filter(lambda r: not r.issubset(vagrantdcos_deployment.central_region),
                                 vagrantdcos_deployment.regions)
     nodes_to_install = set.union(*regions_to_install)
     vagrantdcos_deployment.ycsb_install_regions(nodes_to_install)
     # Stop here. You have to prepare the cassandra DB
-    vagrantdcos_deployment.add_delay(bandwidth="3Mbit",delay="50ms")
-    workloads = ["workloada","workloadb","workloadc"]
+    vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
+    workloads = ["workloada","workloadb","workloadc","workloadd","workloadf"]
     # baseline pipeline. Monitor all the nodes and send the data to some fmoneagents on region 0
-    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="baseline",
-                                              slaves=str(vagrantdcos_deployment.private_agents.__len__()),
-                                              region="0")
-    sleep(180)
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "baseline",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
+    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="central_ycsb_kafka",
+                                              slaves=str(vagrantdcos_deployment.private_agents.__len__()-1),
+                                              region="0") # The region is not even used
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "central",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="40")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
         client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
     sleep(100)
     i = 0
-    for r in vagrantdcos_deployment.regions[:-1]: # all but the central region
+    for r in vagrantdcos_deployment.regions[:-1]: # all but the central region. Note that when the regions are built the central region is appended last
         vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="regional_mongo",
                                                   slaves=str(r.__len__()),
                                                   region=str(i))
         i=i+1
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "regional",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "regional",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="40")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
         client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
     sleep(100)
     i = 0
     for r in vagrantdcos_deployment.regions[:-1]: # all but the central region
-        vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="aggregate",
+        vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="aggregate", # for the aggregate pipeline you have to start the mongocloud instance
                                                   slaves=str(r.__len__()),
                                                   region=str(i))
         i=i+1
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "local_mongos",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="100")
+    vagrantdcos_deployment.ycsb_run(iterations=5,res_dir = "aggregate",workloads=workloads, recordcount="2000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
+
+    #check the elasticity of the containers. How fast can they start with and without pulling the images
+    slaves_and_region = [("1","regioncentral"),("2","region0"),("10","region1"),("30","region2")]
+    force_pull = [True,False]
+    results_elasticity = []
+    for s in slaves_and_region:
+        for f in force_pull:    # The check elasticity function checks needs the number of slaves the force_pull flag and the region
+            results_elasticity.append(vagrantdcos_deployment.check_elasticity(s[0],f,s[1]))
+
+    #deploy a pipeline to check its resilience
+    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="regional_mongo",
+                                              slaves=str("15"), ## OJO AL NUMERO DE SLAVES
+                                              region="2")
+    results_resilience = []
+    for i in xrange(5):
+        results_resilience.append(vagrantdcos_deployment.check_resilience())
+        # The check resilience function checks how much time it takes to start again the pipeline given that one agent fails,
+        # one mongoDB instance fails and that the whole pipeline fails
 
 
 
@@ -99,3 +116,5 @@ if __name__ == '__main__':
 #
 # Workload F: Read-modify-write
 # In this workload, the client will read a record, modify it, and write back the changes. Application example: user database, where user records are read and modified by the user or to record user activity.
+
+

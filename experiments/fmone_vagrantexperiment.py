@@ -6,11 +6,13 @@ from os import makedirs
 from itertools import permutations
 import sys
 import warnings
-from time import strftime
+from time import strftime, sleep, mktime, strptime, time
 import json
 from distutils.dir_util import copy_tree
 from shutil import rmtree
 from glob import glob
+from numpy import mean, std
+import pandas as pd
 
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
 
@@ -118,6 +120,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         :param central_region: the machine that is going to act as central region. It is going to normally hold
         the Marathon user service and all the centralised cloud services
         """
+        # We build the regions without considering the central region
         self.regions = general_util.divide_nodes_into_regions(proportions,
                                                               list(self.private_agents.difference(central_region))
                                                               )
@@ -197,7 +200,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
                                             execo_conn_params=general_util.default_connection_params,  # needed by execo
                                             cassandra_nodes=self.cassandra_nodes)  # the nodes where cassandra is installed
 
-    def ycsb_install_regions(self,regions):
+    def ycsb_install_regions(self, regions):
         # we move the ycsb benchmark that we rsynced to home in order for the CassandraYCSB class to take care of all
         #  the installation process
         print "Uploading the YCSB tar"
@@ -248,10 +251,10 @@ class FmoneVagrantExperiment(VagrantExperiment):
         for (orig_region, dest_region) in permutations(self.regions, 2):
             general_util.add_delay_between_regions(orig_region, dest_region, netem_idx="10")
 
-    def run_fmone_pipeline(self,pipeline_type,slaves,region):
+    def run_fmone_pipeline(self, pipeline_type, slaves, region):
         fmone_util.execute_pipeline(pipeline_type,
-                                        {"@nslaves@": slaves, "@region@": region},
-                                        self.masters, general_util.default_connection_params)
+                                    {"@nslaves@": slaves, "@region@": region},
+                                    self.masters, general_util.default_connection_params)
 
     def save_results(self):
         VagrantExperiment.save_results(self)
@@ -272,7 +275,9 @@ class FmoneVagrantExperiment(VagrantExperiment):
                     workload=w,
                     metric="Throughput")
                 results[w + d] = (list_of_metrics, metrics_mean, metrics_var)
-                print "For workload {0} and {1} the mean throughput is: {2} and variance is {3}".format(w, d, metrics_mean, metrics_var)
+                print "For workload {0} and {1} the mean throughput is: {2} and variance is {3}".format(w, d,
+                                                                                                        metrics_mean,
+                                                                                                        metrics_var)
 
     def remove_node(self, node):
         """
@@ -321,6 +326,89 @@ class FmoneVagrantExperiment(VagrantExperiment):
         with open('.netcheck/net_checkpoint' + now, 'w') as f:
             f.write(p.stdout)
 
+    def check_elasticity(self, nslaves,force_pull,region):
+        curl_node = list(self.masters)[0]
+        general_util.replace_infile("fmone-resources/basic.json", "fmone-resources/exec.json", {"@nslaves@": nslaves,"@region@":region})
+        general_util.Put(hosts=curl_node,
+                         local_files=["fmone-resources/exec.json"],
+                         remote_location="/home/vagrant/exec.json").run()
+        p = general_util.SshProcess(
+            'curl -X POST "http://leader.mesos/service/marathon-user/v2/apps" -H "content-type: application/json" -d@/home/vagrant/exec.json',
+            host=curl_node).run()
+        print p.stdout
+        print p.stderr
+        print "Sleeping for a while"
+        sleep(60)
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                    host=curl_node).run()
+        d = json.loads(p.stdout) # use the basic.json from fmone-resources
+        fmone_tasks = filter(lambda task: task['appId'] == u'/fmone/fmones', d.get('tasks'))
+        start_end = [(task.get('stagedAt'), task.get('startedAt')) for task in fmone_tasks]
+        time_differences = map(lambda pair: mktime(strptime(pair[1][:-5], '%Y-%m-%dT%H:%M:%S')) -
+                                            mktime(strptime(pair[0][:-5], '%Y-%m-%dT%H:%M:%S')), start_end)
+        print "The mean time to start {0} nslaves instances with pulled {1} is: {2} and its variance {3}"\
+                    .format(nslaves, force_pull, mean(time_differences), std(time_differences))
+        p = general_util.SshProcess(
+            'curl -X DELETE "http://leader.mesos/service/marathon-user/v2/groups/fmone" -H "content-type: application/json"',
+            host=curl_node).run()
+        sleep(20)
+        return (nslaves, force_pull, mean(time_differences), std(time_differences))
+
+    def check_resilience(self): # Would be possible to add the region here as a parameter?
+        results = [] ## here we are going to include all of the results
+        curl_node = list(self.masters)[0]
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                    host=curl_node).run()
+        d = json.loads(p.stdout)
+        fmone_tasks = filter(lambda task: task['appId'] == u'/fmonmongorpipe2/fmondocker2/fmoneagentdockerregion2', d.get('tasks'))
+        kill_host = fmone_tasks[0].get('host')
+        general_util.Remote('sudo docker rm -f $(sudo docker ps -a -q)',
+                            hosts=kill_host,
+                            process_args={"nolog_exit_code": True}).run()
+        time1 = time()
+        sleep(20) ## We leave some time till the fmone agent runs again
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                        host=curl_node).run()
+        d = json.loads(p.stdout)
+        killed_host = filter(lambda task: (task['host'] == kill_host),
+                             d.get('tasks'))
+        start_end = [(task.get('stagedAt'), task.get('startedAt')) for task in killed_host]
+        time_differences = map(lambda pair: (mktime(strptime(pair[1][:-5], '%Y-%m-%dT%H:%M:%S'))) - (time1 - 7200) ,start_end)
+        print "The mean time to recover for a Fmone agent is: {0} and its variance {1}"\
+                    .format(mean(time_differences), std(time_differences))
+        results.append(mean(time_differences))
+        mongo_tasks = filter(lambda task: task['appId'] == u'/fmonmongorpipe2/mongor2/mongoregion2', d.get('tasks'))
+        kill_host = mongo_tasks[0].get('host')
+        general_util.Remote('sudo docker rm -f $(sudo docker ps -a -q)',
+                            hosts=kill_host,
+                            process_args={"nolog_exit_code": True}).run()
+        time1 = time()
+        sleep(60) ## we leave some time until all the fmone agents are up and running again
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                    host=curl_node).run()
+        d = json.loads(p.stdout)
+        fmone_tasks = filter(lambda task: task['appId'] == u'/fmonmongorpipe2/fmondocker2/fmoneagentdockerregion2', d.get('tasks'))
+        df = pd.DataFrame(fmone_tasks)
+        df['startedAt'] = pd.to_datetime(df['startedAt'])
+        last_started = (df.sort_values('startedAt', ascending=False).head(1)['startedAt'].values[0].astype('uint64') / 1e9)
+        print "The mean time to recover a Fmone pipeline is: {0}".format(last_started - time1)
+        results.append(last_started - time1)
+        general_util.Remote('sudo docker rm -f $(sudo docker ps -a -q)',
+                            hosts=self.private_agents,
+                            process_args={"nolog_exit_code": True}).run()
+        time1 = time()
+        sleep(260)
+        p = general_util.SshProcess('curl "http://leader.mesos/service/marathon-user/v2/tasks"',
+                                    host=curl_node).run()
+        d = json.loads(p.stdout)
+        fmone_tasks = filter(lambda task: task['appId'] == u'/fmonmongorpipe2/fmondocker2/fmoneagentdockerregion2', d.get('tasks'))
+        df = pd.DataFrame(fmone_tasks)
+        df['startedAt'] = pd.to_datetime(df['startedAt'])
+        last_started = (df.sort_values('startedAt', ascending=False).head(1)['startedAt'].values[0].astype('uint64') / 1e9)
+        print "The mean time to recover from a general failure is: {0}".format(last_started - time1)
+        results.append(last_started - time1)
+        return results
+
 
 if __name__ == '__main__':
     home = "/Users/alvarobrandon/execo_experiments"
@@ -337,7 +425,11 @@ if __name__ == '__main__':
         for d in directories:
             for w in workloads:
                 list_of_metrics, metrics_mean, metrics_var = CassandraYCSB.analyse_results(directory=home + exp + d,
-                                                                              workload=w,
-                                                                              metric="Throughput")
+                                                                                           workload=w,
+                                                                                           metric="Throughput")
                 results[w + d] = (list_of_metrics, metrics_mean, metrics_var)
-                print "For experiment {0} workload {1} and {2} the mean throughput is: {3} and variance {4}".format(exp, w, d, metrics_mean, metrics_var)
+                print "For experiment {0} workload {1} and {2} the mean throughput is: {3} and variance {4}".format(exp,
+                                                                                                                    w,
+                                                                                                                    d,
+                                                                                                                    metrics_mean,
+                                                                                                                    metrics_var)

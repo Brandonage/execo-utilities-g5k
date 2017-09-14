@@ -7,7 +7,7 @@
 				{
 					"id": "/fmonmongorpipe@region@/mongor@region@/mongoregion@region@",
 			  		"cpus": 0.4,
-			  		"mem": 400,
+			  		"mem": 1536,
 			  		"container": {
 			    		"type": "DOCKER",
 			    		"docker": {
@@ -51,7 +51,7 @@
 					},
 					"args": ["1","1","host","inout","mongodb","--mongo_machine_out","mongoregion@region@.mongor@region@.fmonmongorpipe@region@.marathon-user.mesos","--mongo_collection_out","region-@region@-cpu"],
 					"instances": @nslaves@,
-					"constraints": [["region", "CLUSTER", "region@region@"]]
+					"constraints": [["region", "CLUSTER", "region@region@"],["hostname", "UNIQUE"]]
 				}
 			]
 		},
@@ -85,7 +85,7 @@
 					},
 					"args": ["1","1","docker","inout","mongodb","--mongo_machine_out","mongoregion@region@.mongor@region@.fmonmongorpipe@region@.marathon-user.mesos","--mongo_collection_out","region-@region@-cpu"],
 					"instances": @nslaves@,
-					"constraints": [["region", "CLUSTER", "region@region@"]]
+					"constraints": [["region", "CLUSTER", "region@region@"],["hostname", "UNIQUE"]]
 				}
 			]
 		}

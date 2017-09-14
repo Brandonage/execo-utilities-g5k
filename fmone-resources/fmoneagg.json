@@ -7,7 +7,7 @@
 				{ 
 					"id": "/fmonaggpipe@region@/rabbitmqr@region@/rabbitmqregion@region@",
 			  		"cpus": 0.4,
-			  		"mem": 1024,
+			  		"mem": 3072,
 			  		"container": {
 			    		"type": "DOCKER",
 			    		"docker": {
@@ -28,7 +28,7 @@
 				{
 					"id": "/fmonaggpipe@region@/fmonagg@region@/fmoneagentaggregion@region@",
 			  		"cpus": 0.2,
-					"mem": 100,
+					"mem": 200,
 					"container": {
 					  "type": "DOCKER",
 					  "docker": {
@@ -49,7 +49,7 @@
 						}
 					  ]
 					},
-					"args": ["1","5","rabbitmq","average","mongodb","--mq_machine_in","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_in","region@region@","--mongo_machine_out","mongocloud.marathon-user.mesos","--mongo_collection_out","region@region@-aggregate"],
+					"args": ["1","1","rabbitmq","average","mongodb","--mq_machine_in","rabbitmqregion@region@.rabbitmqr@region@.fmonaggpipe@region@.marathon-user.mesos:5672","--routing_key_in","region@region@","--mongo_machine_out","mongocloud.marathon-user.mesos","--mongo_collection_out","region@region@-aggregate"],
 					"instances": 1,
 					"constraints": [["region", "CLUSTER", "region@region@"]]
 				}
@@ -62,7 +62,7 @@
 				{
 					"id": "/fmonaggpipe@region@/fmon@region@/fmoneagentregion@region@",
 			  		"cpus": 0.2,
-					"mem": 100,
+					"mem": 200,
 					"container": {
 					  "type": "DOCKER",
 					  "docker": {
@@ -96,7 +96,7 @@
 				{
 					"id": "/fmonaggpipe@region@/fmondocker@region@/fmoneagentdockerregion@region@",
 			  		"cpus": 0.2,
-					"mem": 100,
+					"mem": 200,
 					"container": {
 					  "type": "DOCKER",
 					  "docker": {
@@ -111,7 +111,7 @@
 					      "mode": "RO"
 					    },
 						{
-						  "containerPath" : "/var/run/docker.sock",
+                            "containerPath" : "/var/run/docker.sock",
 						  "hostPath": "/var/run/docker.sock",
 						  "mode": "RO"
 						}

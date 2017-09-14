@@ -2,17 +2,17 @@
 	"id": "/fmonbaseline",
 	"groups": [
 		{
-			"id": "/fmonbaseline/rabbitmq@region@",
+			"id": "/fmonbaseline/mongo@region@",
 			"apps":[
 				{
-					"id": "/fmonbaseline/rabbitmq@region@/rabbitmqregion",
-			  		"cpus": 0.4,
-			  		"mem": 1024,
+					"id": "/fmonbaseline/mongo@region@/mongoregion",
+			  		"cpus": 0.8,
+			  		"mem": 8192,
 			  		"container": {
 			    		"type": "DOCKER",
 			    		"docker": {
 			      			"network": "HOST",
-			      			"image": "rabbitmq:3-alpine",
+			      			"image": "mongo:latest",
 			      			"forcePullImage": true
 			    		}
 			  		},
@@ -22,42 +22,8 @@
 			]
 		},
 		{
-			"id": "/fmonbaseline/fmonagg@region@",
-			"dependencies": ["/fmonbaseline/rabbitmq@region@"],
-			"apps":[
-				{
-					"id": "/fmonbaseline/fmonagg@region@/fmoneagentaggregion@region@",
-			  		"cpus": 0.2,
-					"mem": 100,
-					"container": {
-					  "type": "DOCKER",
-					  "docker": {
-					    "network": "HOST",
-					    "image": "alvarobrandon/fmone-agent",
-					    "forcePullImage": true
-					  },
-					"volumes": [
-					    {
-					      "containerPath": "/proc_host",
-					      "hostPath": "/proc",
-					      "mode": "RO"
-					    },
-						{
-						  "containerPath" : "/var/run/docker.sock",
-						  "hostPath": "/var/run/docker.sock",
-						  "mode": "RO"
-						}
-					  ]
-					},
-					"args": ["5","1","rabbitmq","inout","console","--mq_machine_in","rabbitmqregion.rabbitmq@region@.fmonbaseline.marathon-user.mesos:5672","--routing_key_in","baseline"],
-					"instances": 6,
-					"constraints": [["region", "CLUSTER", "region@region@"]]
-				}
-			]
-		},
-		{
 			"id": "/fmonbaseline/fmonhost",
-			"dependencies": ["/fmonbaseline/fmonagg@region@"],
+			"dependencies": ["/fmonbaseline/mongo@region@"],
 			"apps":[
 				{
 					"id": "/fmonbaseline/fmonhost/fmoneagenthost",
@@ -83,7 +49,7 @@
 						}
 					  ]
 					},
-					"args": ["1","1","host","inout","rabbitmq","--mq_machine_out","rabbitmqregion.rabbitmq@region@.fmonbaseline.marathon-user.mesos:5672","--routing_key_out","baseline"],
+					"args": ["1","1","host","inout","mongodb","--mongo_machine_out","mongoregion.mongo@region@.fmonbaseline.marathon-user.mesos","--mongo_collection_out","centralised-cpu"],
 					"instances": @nslaves@,
 					"constraints": [["hostname", "UNIQUE"]]
 				}
@@ -91,7 +57,7 @@
 		},
         {
 			"id": "/fmonbaseline/fmondocker",
-			"dependencies": ["/fmonbaseline/fmonagg@region@"],
+			"dependencies": ["/fmonbaseline/mongo@region@"],
 			"apps":[
 				{
 					"id": "/fmonbaseline/fmondocker/fmoneagentdocker",
@@ -117,7 +83,7 @@
 						}
 					  ]
 					},
-					"args": ["1","1","docker","inout","rabbitmq","--mq_machine_out","rabbitmqregion.rabbitmq@region@.fmonbaseline.marathon-user.mesos:5672","--routing_key_out","baseline"],
+					"args": ["1","1","docker","inout","mongodb","--mongo_machine_out","mongoregion.mongo@region@.fmonbaseline.marathon-user.mesos","--mongo_collection_out","centralised-docker"],
 					"instances": @nslaves@,
 					"constraints": [["hostname", "UNIQUE"]]
 				}
