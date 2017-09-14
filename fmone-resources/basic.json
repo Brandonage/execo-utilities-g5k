@@ -1,0 +1,28 @@
+{
+	"id": "/fmone/fmones",
+	"cpus": 0.2,
+	"mem": 100,
+	"container": {
+	  "type": "DOCKER",
+	  "docker": {
+	    "network": "HOST",
+	    "image": "alvarobrandon/fmone-agent",
+	    "forcePullImage": true
+	  },
+	"volumes": [
+	    {
+	      "containerPath": "/proc_host",
+	      "hostPath": "/proc",
+	      "mode": "RO"
+	    },
+		{
+		  "containerPath" : "/var/run/docker.sock",
+		  "hostPath": "/var/run/docker.sock",
+		  "mode": "RO"
+		}
+	  ]
+	},
+	"args": ["1","1","docker","inout","mongodb","--mongo_machine_out","mongocloud.marathon-user.mesos","--mongo_collection_out","elasticity-test"],
+	"instances": @nslaves@,
+	"constraints": [["region", "CLUSTER", "@region@"]]
+}

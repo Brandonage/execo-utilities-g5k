@@ -21,3 +21,7 @@ This is just going to create a series of slaves across the cluster collecting
 docker and host metrics and publishing them to a Kafka queue. The kafka
 queue is created though the DCOS CLI. This installation will give you
 some broker addresses that we have to include in the centralycsb JSON
+- basic: (nslaves, region):
+Used for the elasticity experiments of FMone. It starts a series of nslaves in
+one region. The intented use is to see how much does it take to start a number of
+fmone agents when you have and when you don't have to pull them
