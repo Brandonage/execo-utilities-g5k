@@ -51,7 +51,7 @@ class SparkOARExperiment(OARExperiment):
         spark_util.start_history_server(masternode=self.masternode)
         mongodb_util.install_and_run_mongodb(self.masternode)
         # install dstat (to be used by GMone)
-        monitoring_util.install_dstat(self.nodes)
+        monitoring_util.install_dstat(self.nodes,'debian')
         # install and start gmone
         monitoring_util.install_gmone(master=self.masternode, slaves=self.nodemanagers_list)
         monitoring_util.start_gmone(master=self.masternode, slaves=self.nodemanagers_list)

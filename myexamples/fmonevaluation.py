@@ -1,4 +1,5 @@
 import sys
+# We extend the paths in case we want to upload the experiment to G5K frontend
 sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks"])
 from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment

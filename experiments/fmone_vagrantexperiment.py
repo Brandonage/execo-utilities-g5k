@@ -1,6 +1,5 @@
-from utils import dcos_util, fmone_util, cassandra_util
+from utils import dcos_util, fmone_util, cassandra_util, general_util
 from experiments.vagrantexperiment import VagrantExperiment
-from utils import general_util
 from os.path import exists, expanduser
 from os import makedirs
 from itertools import permutations
@@ -13,9 +12,12 @@ from shutil import rmtree
 from glob import glob
 from numpy import mean, std
 import pandas as pd
-
+# we need to extend the syspath so when we upload the experiment to G5K, it would be able
+# to import the YCSB benchmark
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
-
+# This shows an error because it doesn't considers the sys.path.extend above
+# If we add it to Pycharm we have a problem with the common package which is the same for the benchmarks and the
+# execo utilities
 from ycsb.cassandraycsb import CassandraYCSB
 
 
@@ -68,49 +70,11 @@ class FmoneVagrantExperiment(VagrantExperiment):
     def install(self):
         # TODO: THIS SHOULD ALL GO INTO THE DCOS_UTIL FILE AS A FUNCTION "INSTALL DCOS"
         # E.G INSTALL_DCOS(NODESDF,NMASTERS,NPAGENTS,NPRIVAGENTS)
-        config_yaml_output = "dcos-resources/config.yaml"
-        ip_detect_file = "dcos-resources/ip-detect"
         # We need the dns resolver that the nodes use
         self.dns_resolver = general_util.get_dns_server(self.nodesDF.head(1)['ip'][0])
-        # With all this information we build the config.yaml file necessary for the installation
-        dcos_util.prepare_config_yaml(self.masters, self.private_agents, self.public_agents, self.dns_resolver,
-                                      config_yaml_output)
-        # Here we start preparing all the files needed to launch the installation script
-        # That means: create genconf directory, config.yaml, ip-detect, upload the ssh key
-        general_util.Remote("mkdir -p /home/vagrant/genconf", hosts=self.bootstrap).run()
-        general_util.Put(hosts=self.bootstrap,
-                         local_files=[config_yaml_output],
-                         remote_location="/home/vagrant/genconf/config.yaml").run()
-        general_util.Put(hosts=self.bootstrap,
-                         local_files=[ip_detect_file],
-                         remote_location="/home/vagrant/genconf/ip-detect").run()
-        general_util.Put(hosts=self.bootstrap,
-                         local_files=[expanduser("~") + "/.vagrant.d/insecure_private_key"],
-                         remote_location="/home/vagrant/genconf/ssh_key").run()
-        # We now start the installation process
-        # We put the generate_config.sh directly from our local directory to the bootstrap machine
-        general_util.Put(hosts=self.bootstrap,
-                         local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
-                         remote_location="/home/vagrant/dcos_generate_config.sh"
-                         ).run()
-        general_util.Remote("sudo bash dcos_generate_config.sh --genconf",
-                            hosts=self.bootstrap,
-                            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        general_util.Remote("sudo bash dcos_generate_config.sh --preflight",
-                            hosts=self.bootstrap,
-                            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        general_util.Remote("sudo bash dcos_generate_config.sh --deploy -v",
-                            hosts=self.bootstrap,
-                            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        general_util.Remote("sudo bash dcos_generate_config.sh --postflight",
-                            hosts=self.bootstrap,
-                            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
-        dcos_util.install_dcos_cli(self.masters.union(self.private_agents), list(self.masters)[0])
-        print "The bootstrap node is: {0}".format(','.join(list(self.bootstrap)))
-        print "The masters are: {0}".format(','.join(list(self.masters)))
-        print "The public agents are: {0}".format(','.join(list(self.public_agents)))
-        print "The private agents are: {0}".format(','.join(list(self.private_agents)))
-        print "The DNS server is: {0}".format(general_util.get_dns_server(self.nodesDF.head(1)['ip'][0]))
+        # We call the method from dcos_util that installs everything
+        dcos_util.install_dcos(self.bootstrap,self.masters,self.public_agents,self.private_agents,self.dns_resolver)
+
 
     def build_regions(self, proportions, central_region):
         # we divide the nodes into regions without considering what it will be the master region

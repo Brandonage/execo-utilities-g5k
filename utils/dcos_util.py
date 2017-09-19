@@ -37,6 +37,49 @@ def install_virtual_box(nodes):
            hosts=nodes, connection_params={'user': 'root'}).run()
 
 
+def install_dcos(bootstrap,masters,public_agents,private_agents,dns_resolver):
+    config_yaml_output = "dcos-resources/config.yaml"
+    ip_detect_file = "dcos-resources/ip-detect"
+    # With all the parameters we build the config.yaml file necessary for the installation
+    prepare_config_yaml(masters,private_agents,public_agents,dns_resolver,config_yaml_output)
+    # Here we start preparing all the files needed to launch the installation script
+    # That means: create genconf directory, config.yaml, ip-detect, upload the ssh key
+    Remote("mkdir -p /home/vagrant/genconf", hosts=bootstrap).run()
+    Put(hosts=bootstrap,
+        local_files=[config_yaml_output],
+        remote_location="/home/vagrant/genconf/config.yaml").run()
+    Put(hosts=bootstrap,
+        local_files=[ip_detect_file],
+        remote_location="/home/vagrant/genconf/ip-detect").run()
+    Put(hosts=bootstrap,
+        local_files=[expanduser("~") + "/.vagrant.d/insecure_private_key"],
+        remote_location="/home/vagrant/genconf/ssh_key").run()
+    # We now start the installation process
+    # We put the generate_config.sh directly from our local directory to the bootstrap machine
+    Put(hosts=bootstrap,
+        local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
+        remote_location="/home/vagrant/dcos_generate_config.sh"
+        ).run()
+    Remote("sudo bash dcos_generate_config.sh --genconf",
+           hosts=bootstrap,
+           process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    Remote("sudo bash dcos_generate_config.sh --preflight",
+           hosts=bootstrap,
+           process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    Remote("sudo bash dcos_generate_config.sh --deploy -v",
+           hosts=bootstrap,
+           process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    Remote("sudo bash dcos_generate_config.sh --postflight",
+           hosts=bootstrap,
+           process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
+    install_dcos_cli(masters.union(private_agents), list(masters)[0])
+    print "The bootstrap node is: {0}".format(','.join(list(bootstrap)))
+    print "The masters are: {0}".format(','.join(list(masters)))
+    print "The public agents are: {0}".format(','.join(list(public_agents)))
+    print "The private agents are: {0}".format(','.join(list(private_agents)))
+    print "The DNS server is: {0}".format(dns_resolver)
+
+
 def split_dcos_roles(nodesDF, nmasters, npublic_agents, nprivate_agents):
     nbootstrap = 1  # we need a bootstrap node
     nodes = nodesDF['ip'].values
