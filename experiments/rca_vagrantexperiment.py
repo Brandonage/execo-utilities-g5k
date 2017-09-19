@@ -34,6 +34,17 @@ class RcaVagrantExperiment(VagrantExperiment):
         monitoring_util.default_connection_params['user'] = 'vagrant'
         monitoring_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
 
+    def reload_keys(self):
+        """
+        Use it to reload the execo connection parameters with the ssh vagrant keys and the vagrant user
+        """
+        general_util.default_connection_params['user'] = 'vagrant'
+        general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+        dcos_util.default_connection_params['user'] = 'vagrant'
+        dcos_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+        monitoring_util.default_connection_params['user'] = 'vagrant'
+        monitoring_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+
     def reserve_nodes(self):
         nbootstrap = 1
         # before calling vagrant up lets check if the number of agents and masters equals the nodes specified

@@ -22,6 +22,7 @@ if __name__=='main':
     vagrantrca_deployment.save_experiment(vagrantrca_deployment)
     vagrantrca_deployment.upload_frontends()
     vagrantrca_deployment = RcaVagrantExperiment.reload_experiment()
+    vagrantrca_deployment.reload_keys()
     vagrantrca_deployment.install()
     # we copy the default connection parameters of g5k and change the user and the keyfile
     connection_params = default_connection_params.copy()
