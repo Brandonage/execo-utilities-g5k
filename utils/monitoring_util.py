@@ -1,4 +1,5 @@
 from utils.general_util import *
+import itertools
 
 
 def start_dstat(nodes):
@@ -53,3 +54,56 @@ def install_dstat(nodes,os):
         Remote("DEBIAN_FRONTEND=noninteractive apt-get install -y dstat",hosts=nodes,connection_params={'user': 'root'}).run()
     if os=='centos':
         Remote("sudo yum -y install dstat",hosts=nodes).run()
+
+def start_sysdig_network(nodes):
+    # cmd = "sudo docker run -i -t --name sysdig --privileged " \
+    #       "-v /var/run/docker.sock:/host/var/run/docker.sock -v /dev:/host/dev -v /proc:/host/proc:ro " \
+    #       "-v /boot:/host/boot:ro -v /lib/modules:/host/lib/modules:ro -v /usr:/host/usr:ro -v /home/vagrant:/host/vagrant " \
+    #       "sysdig/sysdig sysdig \"(fd.type=ipv4 or fd.type=ipv6)\" " \
+    #       "and evt.is_io=true -pc\"*%evt.rawtime.s,%fd.type,%evt.type,%evt.args,%evt.dir,%proc.name,%proc.pid,%container.name," \
+    #       "%container.image,%container.id,%container.type,%fd.cip,%fd.sip,%fd.cport,%fd.sport,%fd.lport,%fd.rport," \
+    #       "%fd.l4proto,%evt.io_dir,%evt.failed,%evt.category,%evt.rawarg.res,\" -w /host/vagrant/{{{host}}}.scrap"
+    cmd = "sudo docker run -i -t --name sysdig --privileged " \
+          "-v /var/run/docker.sock:/host/var/run/docker.sock -v /dev:/host/dev -v /proc:/host/proc:ro " \
+          "-v /boot:/host/boot:ro -v /lib/modules:/host/lib/modules:ro -v /usr:/host/usr:ro -v /home/vagrant:/host/vagrant " \
+          "sysdig/sysdig sysdig \"(fd.type=ipv4 or fd.type=ipv6)\" and evt.is_io=true " \
+          "-w /host/vagrant/{{{host}}}.scrap"
+    Remote(cmd,hosts=nodes).start()
+
+def stop_sysdig(nodes):
+    Remote("sudo docker stop sysdig",hosts=nodes).run()
+    Remote("sudo docker rm sysdig", hosts=nodes).run()
+
+
+def start_cadvisor(nodes):
+    cmd = "sudo docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/sys:/sys:ro " \
+          "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/cgroup:/cgroup:ro " \
+          "--publish=8080:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor:latest"
+    Remote(cmd,hosts=nodes).start()
+
+def start_node_exporter(nodes):
+    cmd = "sudo docker run -it -p 9100:9100 " \
+          "-v /proc:/host/proc:ro " \
+          "-v /sys:/host/sys:ro " \
+          "-v /:/rootfs:ro " \
+          "--net=\"host\" " \
+          "prom/node-exporter " \
+          "--path.procfs=\"/host/proc\" " \
+          "--path.sysfs=\"/host/sys\" " \
+          "--collector.filesystem.ignored-mount-points=\"^/(sys|proc|dev|host|etc)($|/)\" "
+    Remote(cmd,hosts=nodes).start()
+
+def start_prometheus(scrape_nodes,scrape_ports):
+    list_of_targets = [ip + ':' + port for (ip, port) in itertools.product(scrape_nodes, scrape_ports)]
+    replace_infile(pathin="aux_utilities/prometheus_template.yml",
+                   pathout="aux_utilities/prometheus.yml",
+                   replacements={"@list_targets@": str(list_of_targets)}
+                   )
+    Put(hosts='nancy.g5k',
+        local_files=["aux_utilities/prometheus.yml"],
+        remote_location="/home/abrandon/prometheus/prometheus-1.7.2.linux-amd64",
+        connection_params={'user': g5k_configuration.get("g5k_user")}).run() # new configuration for Prometheus
+    Remote(cmd="pkill -HUP prometheus",
+           hosts='nancy.g5k',
+           connection_params={'user': g5k_configuration.get("g5k_user")}).run() # restart the prometheus server
+

@@ -25,14 +25,19 @@ if __name__=='main':
     vagrantrca_deployment.reload_keys()
     vagrantrca_deployment.install()
     # we copy the default connection parameters of g5k and change the user and the keyfile
+    vagrantrca_deployment.start_monitoring_utils()
     connection_params = default_connection_params.copy()
     connection_params['user'] = 'vagrant'
     connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
     testbed = MicroServicesRCA(vagrantrca_deployment.masters,
+                               vagrantrca_deployment.private_agents,
                                vagrantrca_deployment.public_agents,
                                connection_params,
-                               orchestrator='dcos'
+                               'dcos',
+                               vagrantrca_deployment.experiment_log
                                )
-    testbed.kafka_producer_consumer_scenario(nbrokers=3,nconsumers=10,nproducers=10)
-    testbed.stress_cpu_nodes(nodes=vagrantrca_deployment.public_agents,nstressors=4,time=20)
+    testbed.kafka_producer_consumer_scenario(nbrokers=3,nconsumers=8,nproducers=8)
+    testbed.stress_cpu_nodes(nodes=vagrantrca_deployment.public_agents,nstressors=4,time=20) # time is in seconds
+    testbed.stress_cpu_nodes_random(nnodes=3,nstressors=6,time=40)
+    vagrantrca_deployment.save_results()
 

@@ -1,6 +1,7 @@
 from utils import dcos_util, general_util, monitoring_util
 from experiments.vagrantexperiment import VagrantExperiment
 from os.path import expanduser
+import pandas as pd
 
 """
 This class is going to represent a RCA experiment with DCOS, where we experiment
@@ -26,6 +27,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         self.nmasters = nmasters
         self.npublic_agents = npublic_agents
         self.nprivate_agents = nprivate_agents
+        self.experiment_log = pd.DataFrame()
         general_util.default_connection_params['user'] = 'vagrant'
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
@@ -68,4 +70,20 @@ class RcaVagrantExperiment(VagrantExperiment):
         # We call the method from dcos_util that installs everything
         dcos_util.install_dcos(self.bootstrap,self.masters,self.public_agents,self.private_agents,self.dns_resolver)
         monitoring_util.install_dstat(self.nodes,'centos')
+
+    def start_monitoring_utils(self):
+        monitoring_util.start_prometheus(scrape_nodes=self.nodes, scrape_ports=['9100', '8080'])
+        monitoring_util.start_cadvisor(self.nodes)
+        monitoring_util.start_node_exporter(self.nodes)
+        monitoring_util.start_sysdig_network(self.nodes)
+
+
+    def save_results(self):
+        monitoring_util.stop_sysdig(self.nodes)
+        VagrantExperiment.save_results(self)
+        general_util.Get(hosts=self.nodes,
+                         remote_files=["{{{host}}}.scrap"],
+                         local_location=self.results_directory).run()
+        self.experiment_log.to_csv("{0}/experiment_log.csv".format(self.results_directory))
+
 
