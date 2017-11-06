@@ -37,7 +37,17 @@ if __name__=='main':
                                vagrantrca_deployment.experiment_log
                                )
     testbed.kafka_producer_consumer_scenario(nbrokers=3,nconsumers=8,nproducers=8)
-    testbed.stress_cpu_nodes(nodes=vagrantrca_deployment.public_agents,nstressors=4,time=20) # time is in seconds
-    testbed.stress_cpu_nodes_random(nnodes=3,nstressors=6,time=40)
+    testbed.stress_cpu_nodes(nodes=vagrantrca_deployment.private_agents,nstressors=4,timeout=20) # time is in seconds
+    testbed.stress_cpu_nodes_random(nnodes=3,nstressors=6,timeout=40)
+    testbed.stress_big_heap_nodes(nodes=vagrantrca_deployment.private_agents,nstressors=2,timeout=20)
+    testbed.stress_big_heap_nodes_random(nnodes=2,nstressors=2,timeout=20)
+    testbed.stress_big_heap_nodes(nodes='10.158.41.41', nstressors=2, timeout=20)
+    testbed.stress_disk_nodes_random(nnodes=3,nstressors=3,timeout=20)
+    testbed.stress_network_nodes(nodes=vagrantrca_deployment.private_agents,nstressors=2,timeout=10)
+    testbed.stress_network_nodes_random(nnodes=2,nstressors=2,timeout=20)
+    testbed.limit_upload_bandwidth_nodes_random(nnodes=2,delay='100ms',delay_jitter='50ms',bandwidth='500kbps',loss_percent='5%')
+    testbed.limit_upload_bandwidth_nodes(nodes={'10.158.13.94','10.158.13.95','10.158.13.96'},delay='100ms',delay_jitter='50ms',bandwidth='500kbps',loss_percent='5%')
+
+    testbed.restore_upload_bandwidth_nodes(nodes={'10.158.13.94','10.158.13.95','10.158.13.96'})
     vagrantrca_deployment.save_results()
 

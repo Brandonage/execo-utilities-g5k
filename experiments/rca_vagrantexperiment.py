@@ -27,7 +27,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         self.nmasters = nmasters
         self.npublic_agents = npublic_agents
         self.nprivate_agents = nprivate_agents
-        self.experiment_log = pd.DataFrame()
+        self.experiment_log  = pd.DataFrame(columns=["type","name","nodes","date_start","date_end","aditional_info"])
         general_util.default_connection_params['user'] = 'vagrant'
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
@@ -72,7 +72,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         monitoring_util.install_dstat(self.nodes,'centos')
 
     def start_monitoring_utils(self):
-        monitoring_util.start_prometheus(scrape_nodes=self.nodes, scrape_ports=['9100', '8080'])
+        monitoring_util.start_prometheus(scrape_nodes=self.nodes, scrape_ports=['9100', '8082'])
         monitoring_util.start_cadvisor(self.nodes)
         monitoring_util.start_node_exporter(self.nodes)
         monitoring_util.start_sysdig_network(self.nodes)
@@ -81,9 +81,11 @@ class RcaVagrantExperiment(VagrantExperiment):
     def save_results(self):
         monitoring_util.stop_sysdig(self.nodes)
         VagrantExperiment.save_results(self)
+        general_util.Remote(cmd="gzip {{{host}}}.scrap*",hosts=self.nodes).run()
         general_util.Get(hosts=self.nodes,
-                         remote_files=["{{{host}}}.scrap"],
+                         remote_files=["{{{host}}}.scrap.gz"],
                          local_location=self.results_directory).run()
         self.experiment_log.to_csv("{0}/experiment_log.csv".format(self.results_directory))
+        self.experiment_log.to_pickle("{0}/experiment_log.pickle".format(self.results_directory))
 
 
