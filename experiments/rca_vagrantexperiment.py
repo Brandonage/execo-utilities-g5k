@@ -27,7 +27,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         self.nmasters = nmasters
         self.npublic_agents = npublic_agents
         self.nprivate_agents = nprivate_agents
-        self.experiment_log  = pd.DataFrame(columns=["type","name","nodes","date_start","date_end","aditional_info"])
+        self.experiment_log  = pd.DataFrame(columns=["type","event","nodes","date_start","date_end","aditional_info"])
         general_util.default_connection_params['user'] = 'vagrant'
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
@@ -85,7 +85,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         general_util.Get(hosts=self.nodes,
                          remote_files=["{{{host}}}.scrap.gz"],
                          local_location=self.results_directory).run()
-        self.experiment_log.to_csv("{0}/experiment_log.csv".format(self.results_directory))
+        self.experiment_log.to_csv("{0}/experiment_log.csv".format(self.results_directory),index=False)
         self.experiment_log.to_pickle("{0}/experiment_log.pickle".format(self.results_directory))
 
 

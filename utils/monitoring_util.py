@@ -78,8 +78,8 @@ def stop_sysdig(nodes):
 
 def start_cadvisor(nodes):
     cmd = "sudo docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/sys:/sys:ro " \
-          "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/cgroup:/cgroup:ro " \
-          "--publish=8082:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor:latest"
+          "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev:/dev:ro --volume=/cgroup:/cgroup:ro " \
+          "--publish=8082:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor"
     Remote(cmd,hosts=nodes).start()
 
 def start_node_exporter(nodes):
@@ -100,11 +100,11 @@ def start_prometheus(scrape_nodes,scrape_ports):
                    pathout="aux_utilities/prometheus.yml",
                    replacements={"@list_targets@": str(list_of_targets)}
                    )
-    Put(hosts='nancy.g5k',
+    Put(hosts='abrandon-vm.lille.grid5000.fr',
         local_files=["aux_utilities/prometheus.yml"],
-        remote_location="/home/abrandon/prometheus/prometheus-1.7.2.linux-amd64",
-        connection_params={'user': g5k_configuration.get("g5k_user")}).run() # new configuration for Prometheus
+        remote_location="/opt/prometheus-2.0.0.linux-amd64",
+        connection_params={'user': "root"}).run() # new configuration for Prometheus
     Remote(cmd="pkill -HUP prometheus",
-           hosts='nancy.g5k',
-           connection_params={'user': g5k_configuration.get("g5k_user")}).run() # restart the prometheus server
+           hosts='abrandon-vm.lille.grid5000.fr',
+           connection_params={'user': "root"}).run() # restart the prometheus server
 

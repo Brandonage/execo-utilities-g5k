@@ -36,9 +36,27 @@ if __name__=='main':
                                'dcos',
                                vagrantrca_deployment.experiment_log
                                )
-    testbed.kafka_producer_consumer_scenario(nbrokers=3,nconsumers=8,nproducers=8)
+    # new scenarios
+    # A loadbalancing scenario
+    testbed.lb_wordpress_scenario(nwordpress=10)
+    # Don't forget to access the endpoint marathon-lb.marathon.mesos:10001 to configure the wordpress
+    testbed.siege_http_clients_scenario(endpoint="marathonlb-loadbalancer-wordpresslb.marathon-user.containerip.dcos.thisdcos.directory:10001",
+                                        ninstances=3,
+                                        nclients=80,
+                                        ntime=2,
+                                        time_unit="H",
+                                        delay=5)
+    testbed.stress_endpoint(endpoint="marathonlb-loadbalancer-wordpresslb.marathon-user.containerip.dcos.thisdcos.directory:10001",
+                            ninstances=4,
+                            nclients=5,
+                            ntime=1,
+                            time_unit="M")
+    # A hadoop cluster scenario
+    testbed.hadoop_cluster_scenario(ndatanodes=3,nnodemanagers=3)
+    # The old kafka scenario
+    testbed.kafka_producer_consumer_scenario(nbrokers=3,nconsumers=7,nproducers=7)
     testbed.stress_cpu_nodes(nodes=vagrantrca_deployment.private_agents,nstressors=4,timeout=20) # time is in seconds
-    testbed.stress_cpu_nodes_random(nnodes=3,nstressors=6,timeout=40)
+    testbed.stress_cpu_nodes_random(nnodes=4,nstressors=6,timeout=40)
     testbed.stress_big_heap_nodes(nodes=vagrantrca_deployment.private_agents,nstressors=2,timeout=20)
     testbed.stress_big_heap_nodes_random(nnodes=2,nstressors=2,timeout=20)
     testbed.stress_big_heap_nodes(nodes='10.158.41.41', nstressors=2, timeout=20)
