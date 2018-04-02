@@ -28,8 +28,9 @@
 						}
 					  ]
 					},
-					"args": ["1","1","host","inout","kafka","--kafka_bootstrap_out","10.144.47.140:9412","--kafka_topic_out","fmone"],
+					"args": ["1","1","host","inout","kafka","--kafka_bootstrap_out","kafka-kafkabrokers-kafkaprodandcons.marathon-user.containerip.dcos.thisdcos.directory:9092","--kafka_topic_out","fmone"],
 					"instances": @nslaves@,
+					"ipAddress": {"networkName": "dcos"},
 					"constraints": [["hostname", "UNIQUE"]]
 				}
 			]
@@ -61,8 +62,9 @@
 						}
 					  ]
 					},
-					"args": ["1","1","docker","inout","kafka","--kafka_bootstrap_out","10.144.47.140:9412","--kafka_topic_out","fmone"],
+					"args": ["1","1","docker","inout","kafka","--kafka_bootstrap_out","kafka-kafkabrokers-kafkaprodandcons.marathon-user.containerip.dcos.thisdcos.directory:9092","--kafka_topic_out","fmone"],
 					"instances": @nslaves@,
+					"ipAddress": {"networkName": "dcos"},
 					"constraints": [["hostname", "UNIQUE"]]
 				}
 			]

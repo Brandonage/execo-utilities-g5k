@@ -67,8 +67,11 @@ def start_sysdig_network(nodes):
           "-v /var/run/docker.sock:/host/var/run/docker.sock -v /dev:/host/dev -v /proc:/host/proc:ro " \
           "-v /boot:/host/boot:ro -v /lib/modules:/host/lib/modules:ro -v /usr:/host/usr:ro -v /home/vagrant:/host/vagrant " \
           "sysdig/sysdig sysdig \"not(proc.name contains stress-ng)\" and \"(fd.type=ipv4 or fd.type=ipv6)\" and evt.is_io=true " \
-          "-pc\"%evt.rawtime.s,%fd.num,%fd.type,%evt.type,%evt.dir,%proc.name,%proc.pid,%container.name,%container.image,%container.id,%container.type,%fd.name,%fd.cip,%fd.sip,%fd.lip,%fd.rip,%fd.is_server,%fd.cport,%fd.sport,%fd.lport,%fd.rport,%fd.l4proto,%evt.io_dir,%evt.category,%evt.rawarg.res\" " \
-          "-w /host/vagrant/{{{host}}}.scrap"
+          "-p\"%evt.rawtime.s,%fd.num,%fd.type,%evt.type,%evt.dir,%proc.name,%proc.pid,%container.name,%container.image,%container.id,%container.type,%fd.name,%fd.cip,%fd.sip,%fd.lip,%fd.rip,%fd.is_server,%fd.cport,%fd.sport,%fd.lport,%fd.rport,%fd.l4proto,%evt.io_dir,%evt.category,%evt.rawarg.res\" " \
+          "> /home/vagrant/{{{host}}}.scrap"
+    # NOTE: we add the container.image but the idea is to take it out in the future since it filters out
+    # processes that are not containers, like the zookeper of mesos and all of the native mesos processes
+    # that run on the hosts
     Remote(cmd,hosts=nodes).start()
 
 def stop_sysdig(nodes):
@@ -77,9 +80,10 @@ def stop_sysdig(nodes):
 
 
 def start_cadvisor(nodes):
-    cmd = "sudo docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/sys:/sys:ro " \
-          "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev:/dev:ro --volume=/cgroup:/cgroup:ro " \
-          "--publish=8082:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor"
+    cmd = "sudo mount -o remount,rw '/sys/fs/cgroup' && sudo ln -s /sys/fs/cgroup/cpu,cpuacct /sys/fs/cgroup/cpuacct,cpu && " \
+          "sudo docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/sys:/sys:ro " \
+          "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/cgroup:/cgroup:ro " \
+          "--publish=8082:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor:latest"
     Remote(cmd,hosts=nodes).start()
 
 def start_node_exporter(nodes):
