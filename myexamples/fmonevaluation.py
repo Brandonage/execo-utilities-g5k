@@ -40,7 +40,10 @@ if __name__ == '__main__':
     # Stop here. You have to install the Kafka queue. You can do so through the fmone-resources/kakfa.json file
     vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
     workloads = ["workloada","workloadb","workloadc","workloadd","workloadf"]
-    # baseline pipeline. Monitor all the nodes and send the data to some fmoneagents on region 0
+    # baseline pipeline. Monitor all the nodes and send the data to a kafka queue on region 0. ATTENTION: You have to
+    # launch the kafka queue first. You can do that with the kafka.json template that is on the fmone-resources folder.
+    # You don't have to do anything just curl the whole kafka.json template to the marathon API
+    # curl -X POST "http://leader.mesos/service/marathon-user/v2/groups" -H "content-type: application/json" -d@/home/vagrant/exec.json
     vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="central_ycsb_kafka",
                                               slaves=str(vagrantdcos_deployment.private_agents.__len__()-1),
                                               region="0") # The region is not even used
@@ -71,6 +74,16 @@ if __name__ == '__main__':
     vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
+
+    # We include here a comparison with Prometheus centralised approach
+    vagrantdcos_deployment.start_cadvisor_containers()
+    cadvisor_targets=map(lambda x : x + ':8082',list(vagrantdcos_deployment.nodes))
+    vagrantdcos_deployment.start_prometheus_in_region(region=0,targets=cadvisor_targets,federated_targets=False)
+
+    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.save_results()
+    vagrantdcos_deployment.analyse_results(workloads)
+
 
     #check the elasticity of the containers. How fast can they start with and without pulling the images
     slaves_and_region = [("1","regioncentral"),("2","region0"),("10","region1"),("30","region2")]

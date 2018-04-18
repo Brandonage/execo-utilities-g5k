@@ -98,7 +98,7 @@ def start_node_exporter(nodes):
           "--collector.filesystem.ignored-mount-points=\"^/(sys|proc|dev|host|etc)($|/)\" "
     Remote(cmd,hosts=nodes).start()
 
-def start_prometheus(scrape_nodes,scrape_ports):
+def start_prometheus_lille_vm(scrape_nodes, scrape_ports):
     list_of_targets = [ip + ':' + port for (ip, port) in itertools.product(scrape_nodes, scrape_ports)]
     replace_infile(pathin="aux_utilities/prometheus_template.yml",
                    pathout="aux_utilities/prometheus.yml",
@@ -111,4 +111,15 @@ def start_prometheus(scrape_nodes,scrape_ports):
     Remote(cmd="pkill -HUP prometheus",
            hosts='abrandon-vm.lille.grid5000.fr',
            connection_params={'user': "root"}).run() # restart the prometheus server
+
+def start_prometheus_fmone(node, scrape_targets,federated_targets):
+    replace_infile(pathin="aux_utilities/prometheus_template_fmone.yml",
+                   pathout ="aux_utilities/prometheus.yml",
+                   replacements={"@list_targets@": str(scrape_targets)}
+                   )
+    Put(hosts=node,
+        local_files=["aux_utilities/prometheus.yml"],
+        remote_location="/home/vagrant").run()
+    Remote(cmd="sudo docker run -p 9090:9090 -v /home/vagrant/prometheus.yml:/etc/prometheus/prometheus.yml \
+       prom/prometheus").run()
 

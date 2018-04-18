@@ -72,7 +72,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         monitoring_util.install_dstat(self.nodes,'centos')
 
     def start_monitoring_utils(self):
-        monitoring_util.start_prometheus(scrape_nodes=self.nodes, scrape_ports=['9100', '8082'])
+        monitoring_util.start_prometheus_lille_vm(scrape_nodes=self.nodes, scrape_ports=['9100', '8082'])
         monitoring_util.start_cadvisor(self.nodes)
         monitoring_util.start_node_exporter(self.nodes)
         monitoring_util.start_sysdig_network(self.nodes)

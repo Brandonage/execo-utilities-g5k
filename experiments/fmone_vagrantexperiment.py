@@ -1,4 +1,4 @@
-from utils import dcos_util, fmone_util, cassandra_util, general_util
+from utils import dcos_util, fmone_util, cassandra_util, general_util, monitoring_util
 from experiments.vagrantexperiment import VagrantExperiment
 from os.path import exists, expanduser
 from os import makedirs
@@ -40,6 +40,8 @@ class FmoneVagrantExperiment(VagrantExperiment):
         dcos_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         cassandra_util.default_connection_params['user'] = 'vagrant'
         cassandra_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
+        monitoring_util.default_connection_params['user'] = 'vagrant'
+        monitoring_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
 
     def reload_keys(self):
         """
@@ -372,6 +374,24 @@ class FmoneVagrantExperiment(VagrantExperiment):
         print "The mean time to recover from a general failure is: {0}".format(last_started - time1)
         results.append(last_started - time1)
         return results
+
+    def start_cadvisor_containers(self):
+        monitoring_util.start_cadvisor(self.nodes)
+
+    def start_prometheus_in_region(self,region,targets,federated_targets):
+        """
+        It starts a prometheus instance as a container in one random node of one region. Targets specify the endpoints
+        that this particular prometheus server is going to scrape. Federated targets indicate if the targets are other
+        prometheus instances that we might want to query.
+        :param region: int the region number
+        :param targets: list e.g. ['10.134.56.12:9090','10.134.56.16:9090', ...]
+        :param federated_targets: bool True if you are scrapping federated prometheus instances. False otherwise
+        """
+        hosting_node = self.regions[region][0]
+        monitoring_util.start_prometheus_fmone(node=hosting_node,
+                                               scrape_targets=targets,
+                                               federated_targets=federated_targets)
+
 
 
 if __name__ == '__main__':
