@@ -1,0 +1,54 @@
+{
+	"id": "/kafkaprodandcons",
+	"groups": [
+		{
+			"id": "/kafkaprodandcons/zookeeper",
+			"apps":[
+				{
+					"id": "/kafkaprodandcons/zookeeper/zookeeper",
+			  		"cpus": 0.4,
+			  		"mem": 1024,
+			  		"container": {
+			    		"type": "DOCKER",
+			    		"docker": {
+			      			"network": "USER",
+			      			"image": "zookeeper",
+			      			"forcePullImage": true
+			    		}
+			  		},
+			  		"instances": 1,
+                    "ipAddress": {"networkName": "dcos"},
+                    "constraints": [["hostname", "GROUP_BY"],["region","CLUSTER","region0"]]
+				}
+			]
+		},
+		{
+			"id": "/kafkaprodandcons/kafkabrokers",
+            "dependencies": ["/kafkaprodandcons/zookeeper"],
+			"apps":[
+				{
+					"id": "/kafkaprodandcons/kafkabrokers/kafka",
+			  		"cpus": 1,
+			  		"mem": 2024,
+			  		"container": {
+			    		"type": "DOCKER",
+			    		"docker": {
+			      			"network": "USER",
+			      			"image": "ches/kafka",
+			      			"forcePullImage": true
+			    		}
+			  		},
+			  		"instances": 4,
+                    "ipAddress": {"networkName": "dcos"},
+			  		"constraints": [["hostname", "GROUP_BY"],["region","CLUSTER","region0"]],
+					"env" : {
+    					"ZOOKEEPER_IP" : "zookeeper-zookeeper-kafkaprodandcons.marathon-user.containerip.dcos.thisdcos.directory",
+    					"KAFKA_BROKER_ID" : "-1",
+    					"KAFKA_AUTO_CREATE_TOPICS_ENABLE" : "true",
+						"KAFKA_NUM_PARTITIONS" : "10"
+  					}
+				}
+			]
+		}
+	]
+}
