@@ -34,6 +34,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         self.nmasters = nmasters
         self.npublic_agents = npublic_agents
         self.nprivate_agents = nprivate_agents
+        self.prometheus_servers = []
         general_util.default_connection_params['user'] = 'vagrant'
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'
@@ -76,6 +77,7 @@ class FmoneVagrantExperiment(VagrantExperiment):
         self.dns_resolver = general_util.get_dns_server(self.nodesDF.head(1)['ip'][0])
         # We call the method from dcos_util that installs everything
         dcos_util.install_dcos(self.bootstrap,self.masters,self.public_agents,self.private_agents,self.dns_resolver)
+        monitoring_util.install_dstat(self.nodes, 'centos')
 
 
     def build_regions(self, proportions, central_region):
@@ -378,6 +380,9 @@ class FmoneVagrantExperiment(VagrantExperiment):
     def start_cadvisor_containers(self):
         monitoring_util.start_cadvisor(self.nodes)
 
+    def stop_cadvisor_containers(self):
+        monitoring_util.stop_cadvisor(self.nodes)
+
     def start_prometheus_in_region(self,region,targets,federated_targets):
         """
         It starts a prometheus instance as a container in one random node of one region. Targets specify the endpoints
@@ -387,10 +392,16 @@ class FmoneVagrantExperiment(VagrantExperiment):
         :param targets: list e.g. ['10.134.56.12:9090','10.134.56.16:9090', ...]
         :param federated_targets: bool True if you are scrapping federated prometheus instances. False otherwise
         """
-        hosting_node = self.regions[region][0]
+        hosting_node = list(self.regions[region])[0]
+        self.prometheus_servers.append((region,hosting_node))
         monitoring_util.start_prometheus_fmone(node=hosting_node,
                                                scrape_targets=targets,
-                                               federated_targets=federated_targets)
+                                               federated_targets=federated_targets,
+                                               region='region_{0}'.format(region))
+
+    def stop_all_prometheus_instances(self):
+        servers = [pair[1] for pair in self.prometheus_servers]
+        monitoring_util.stop_prometheus_servers(servers)
 
 
 

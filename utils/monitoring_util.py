@@ -78,13 +78,16 @@ def stop_sysdig(nodes):
     Remote("sudo docker stop sysdig",hosts=nodes).run()
     Remote("sudo docker rm sysdig", hosts=nodes).run()
 
-
 def start_cadvisor(nodes):
     cmd = "sudo mount -o remount,rw '/sys/fs/cgroup' && sudo ln -s /sys/fs/cgroup/cpu,cpuacct /sys/fs/cgroup/cpuacct,cpu && " \
           "sudo docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/sys:/sys:ro " \
           "--volume=/var/lib/docker/:/var/lib/docker:ro --volume=/dev/disk/:/dev/disk:ro --volume=/cgroup:/cgroup:ro " \
           "--publish=8082:8080 --privileged=true --detach=true --name=cadvisor google/cadvisor:latest"
     Remote(cmd,hosts=nodes).start()
+
+def stop_cadvisor(nodes):
+    Remote("sudo docker stop cadvisor",hosts=nodes).run()
+    Remote("sudo docker rm cadvisor", hosts=nodes).run()
 
 def start_node_exporter(nodes):
     cmd = "sudo docker run -it -p 9100:9100 " \
@@ -112,14 +115,18 @@ def start_prometheus_lille_vm(scrape_nodes, scrape_ports):
            hosts='abrandon-vm.lille.grid5000.fr',
            connection_params={'user': "root"}).run() # restart the prometheus server
 
-def start_prometheus_fmone(node, scrape_targets,federated_targets):
+def start_prometheus_fmone(node, scrape_targets,federated_targets, region):
     replace_infile(pathin="aux_utilities/prometheus_template_fmone.yml",
                    pathout ="aux_utilities/prometheus.yml",
-                   replacements={"@list_targets@": str(scrape_targets)}
+                   replacements={"@list_targets@": str(scrape_targets), "@region@": str(region)}
                    )
     Put(hosts=node,
         local_files=["aux_utilities/prometheus.yml"],
         remote_location="/home/vagrant").run()
     Remote(cmd="sudo docker run -p 9090:9090 -v /home/vagrant/prometheus.yml:/etc/prometheus/prometheus.yml \
-       prom/prometheus").run()
+       --name=prom prom/prometheus",hosts=node).start()
+
+def stop_prometheus_servers(nodes):
+    Remote("sudo docker stop prom",hosts=nodes).run()
+    Remote("sudo docker rm prom", hosts=nodes).run()
 

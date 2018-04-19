@@ -38,7 +38,7 @@
 			      			"forcePullImage": true
 			    		}
 			  		},
-			  		"instances": 4,
+			  		"instances": 3,
                     "ipAddress": {"networkName": "dcos"},
 			  		"constraints": [["hostname", "GROUP_BY"],["region","CLUSTER","region0"]],
 					"env" : {

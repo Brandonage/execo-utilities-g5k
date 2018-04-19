@@ -31,6 +31,7 @@ if __name__ == '__main__':
     vagrantdcos_deployment.build_regions(proportions=[7,22,40,33], central_region=set(list(vagrantdcos_deployment.private_agents)[-ncentral:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     # Next, cassandra is going to be installed in the central region
+    # ncassandra is not used since it is always installed in the central region
     vagrantdcos_deployment.install_cassandra(ncassandra=str(ncentral),nseeds="1")
     # We will install yscb in all the regions but the central one.
     regions_to_install = filter(lambda r: not r.issubset(vagrantdcos_deployment.central_region),
@@ -40,6 +41,21 @@ if __name__ == '__main__':
     # Stop here. You have to install the Kafka queue. You can do so through the fmone-resources/kakfa.json file
     vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
     workloads = ["workloada","workloadb","workloadc","workloadd","workloadf"]
+    # REMEMBER: TO LAUNCH THE DUMMY CONTAINERS
+
+    # We include here a comparison with Prometheus centralised approach
+    vagrantdcos_deployment.start_cadvisor_containers()
+    cadvisor_targets=map(lambda x : x + ':8082',list(vagrantdcos_deployment.nodes))
+    vagrantdcos_deployment.start_prometheus_in_region(region=0,targets=cadvisor_targets,federated_targets=False)
+
+    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.save_results()
+    vagrantdcos_deployment.analyse_results(workloads)
+
+    vagrantdcos_deployment.stop_cadvisor_containers()
+    vagrantdcos_deployment.stop_all_prometheus_instances()
+
+
     # baseline pipeline. Monitor all the nodes and send the data to a kafka queue on region 0. ATTENTION: You have to
     # launch the kafka queue first. You can do that with the kafka.json template that is on the fmone-resources folder.
     # You don't have to do anything just curl the whole kafka.json template to the marathon API
@@ -59,7 +75,7 @@ if __name__ == '__main__':
                                                   region=str(i))
         i=i+1
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "regional",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="regional",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     client, dest_phone, orig_phone = create_twilio_client()
     if client is not None:
         client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
@@ -71,19 +87,9 @@ if __name__ == '__main__':
                                                   region=str(i))
         i=i+1
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
-
-    # We include here a comparison with Prometheus centralised approach
-    vagrantdcos_deployment.start_cadvisor_containers()
-    cadvisor_targets=map(lambda x : x + ':8082',list(vagrantdcos_deployment.nodes))
-    vagrantdcos_deployment.start_prometheus_in_region(region=0,targets=cadvisor_targets,federated_targets=False)
-
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
-    vagrantdcos_deployment.save_results()
-    vagrantdcos_deployment.analyse_results(workloads)
-
 
     #check the elasticity of the containers. How fast can they start with and without pulling the images
     slaves_and_region = [("1","regioncentral"),("2","region0"),("10","region1"),("30","region2")]

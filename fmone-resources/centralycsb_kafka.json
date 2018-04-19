@@ -6,7 +6,7 @@
 			"apps":[
 				{
 					"id": "/fmoncentralpipekafka/fmon-allregions-host/fmoneagent-allregions-host",
-			  		"cpus": 0.5,
+			  		"cpus": 0.3,
 					"mem": 200,
 					"container": {
 					  "type": "DOCKER",
@@ -40,7 +40,7 @@
 			"apps":[
 				{
 					"id": "/fmoncentralpipekafka/fmon-allregions-docker/fmoneagent-allregions-docker",
-			  		"cpus": 0.5,
+			  		"cpus": 0.3,
 					"mem": 200,
 					"container": {
 					  "type": "DOCKER",
