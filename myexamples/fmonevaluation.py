@@ -10,14 +10,14 @@ from aux_utilities.twilio_client import create_twilio_client
 
 if __name__ == '__main__':
     #dict = {"cluster":[("grimoire",1),("grisou",1)],"nodes":[(["griffon-17.nancy.grid5000.fr","griffon-16.nancy.grid5000.fr"],2)]}
-    dict = [(78,4,10)] # the format is nnodes,cores,GB
+    dict = [(60,4,10)] # the format is nnodes,cores,GB
     walltime = "3:25:00"
     experiment_name="dcosvagrant"
     frontend="nancy"
     description="This experiment evaluates the elasticity of Fmone"
     vagrantdcos_deployment = FmoneVagrantExperiment(frontend=frontend, resources=dict, walltime=walltime,
                                                     experiment_name=experiment_name, description=description, nmasters=3,
-                                                    nprivate_agents=73, npublic_agents=1)
+                                                    nprivate_agents=55, npublic_agents=1)
     vagrantdcos_deployment.reserve_nodes()
     vagrantdcos_deployment.deploy_nodes()
     vagrantdcos_deployment.split_dcos_roles()
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     vagrantdcos_deployment.install()
     # I build the regions and I leave an ncentral number of private node as the central region
     ncentral = 4
-    vagrantdcos_deployment.build_regions(proportions=[7,22,40,33], central_region=set(list(vagrantdcos_deployment.private_agents)[-ncentral:]))
+    vagrantdcos_deployment.build_regions(proportions=[8,22,39,33], central_region=set(list(vagrantdcos_deployment.private_agents)[-ncentral:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     # Next, cassandra is going to be installed in the central region
     # ncassandra is not used since it is always installed in the central region
@@ -41,33 +41,25 @@ if __name__ == '__main__':
     # Stop here. You have to install the Kafka queue. You can do so through the fmone-resources/kakfa.json file
     vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
     workloads = ["workloada","workloadb","workloadc","workloadd","workloadf"]
-    # REMEMBER: TO LAUNCH THE DUMMY CONTAINERS
+    vagrantdcos_deployment.start_dummy_containers()
 
     # We include here a comparison with Prometheus centralised approach
     vagrantdcos_deployment.start_cadvisor_containers()
     cadvisor_targets=map(lambda x : x + ':8082',list(vagrantdcos_deployment.nodes))
     vagrantdcos_deployment.start_prometheus_in_region(region=0,targets=cadvisor_targets,federated_targets=False)
-
+    sleep(560)
     vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
-    vagrantdcos_deployment.save_results()
-    vagrantdcos_deployment.analyse_results(workloads)
-
     vagrantdcos_deployment.stop_cadvisor_containers()
     vagrantdcos_deployment.stop_all_prometheus_instances()
-
-
-    # baseline pipeline. Monitor all the nodes and send the data to a kafka queue on region 0. ATTENTION: You have to
-    # launch the kafka queue first. You can do that with the kafka.json template that is on the fmone-resources folder.
-    # You don't have to do anything just curl the whole kafka.json template to the marathon API
-    # curl -X POST "http://leader.mesos/service/marathon-user/v2/groups" -H "content-type: application/json" -d@/home/vagrant/exec.json
+    vagrantdcos_deployment.start_kafka_queue()
     vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="central_ycsb_kafka",
                                               slaves=str(vagrantdcos_deployment.private_agents.__len__()-1),
                                               region="0") # The region is not even used
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir = "central",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
-    client, dest_phone, orig_phone = create_twilio_client()
-    if client is not None:
-        client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
-    sleep(100)
+    sleep(460)
+    vagrantdcos_deployment.ycsb_run(iterations=1,res_dir = "central",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.clean_marathon_groups()
+    sleep(360)
+    vagrantdcos_deployment.start_dummy_containers()
     i = 0
     for r in vagrantdcos_deployment.regions[:-1]: # all but the central region. Note that when the regions are built the central region is appended last
         vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="regional_mongo",
@@ -76,10 +68,9 @@ if __name__ == '__main__':
         i=i+1
     sleep(380)
     vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="regional",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
-    client, dest_phone, orig_phone = create_twilio_client()
-    if client is not None:
-        client.messages.create(to=dest_phone,from_=orig_phone,body="Kill the Fmone pipeline. Next pipeline going to be executed")
-    sleep(100)
+    vagrantdcos_deployment.clean_marathon_groups()
+    sleep(360)
+    vagrantdcos_deployment.start_dummy_containers()
     i = 0
     for r in vagrantdcos_deployment.regions[:-1]: # all but the central region
         vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="aggregate", # for the aggregate pipeline you have to start the mongocloud instance
@@ -87,9 +78,11 @@ if __name__ == '__main__':
                                                   region=str(i))
         i=i+1
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.ycsb_run(iterations=2,res_dir="aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
+
+
 
     #check the elasticity of the containers. How fast can they start with and without pulling the images
     slaves_and_region = [("1","regioncentral"),("2","region0"),("10","region1"),("30","region2")]

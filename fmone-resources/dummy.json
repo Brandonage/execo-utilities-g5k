@@ -1,0 +1,16 @@
+{
+  "id": "dummy-containers",
+  "cmd" : "sh -c 'while sleep 36000; do :;done'",
+  "cpus": 0.01,
+  "mem": 30,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "network": "HOST",
+      "image": "alpine",
+      "forcePullImage": true
+    }
+  },
+  "instances": @ninstances@,
+  "constraints": [["hostname", "GROUP_BY","5"]]
+}

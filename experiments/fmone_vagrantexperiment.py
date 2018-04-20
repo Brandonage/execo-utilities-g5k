@@ -403,6 +403,35 @@ class FmoneVagrantExperiment(VagrantExperiment):
         servers = [pair[1] for pair in self.prometheus_servers]
         monitoring_util.stop_prometheus_servers(servers)
 
+    def start_dummy_containers(self):
+        curl_node=list(self.masters)[0]
+        ninstances = list(self.private_agents).__len__()*5
+        general_util.replace_infile("fmone-resources/dummy.json", "fmone-resources/exec.json", {"@ninstances@": str(ninstances)})
+        general_util.Put(hosts=curl_node,
+                         local_files=["fmone-resources/exec.json"],
+                         remote_location="/home/vagrant/exec.json").run()
+        p = general_util.SshProcess(
+            'curl -X POST "http://leader.mesos/service/marathon-user/v2/apps" -H "content-type: application/json" -d@/home/vagrant/exec.json',
+            host=curl_node).run()
+
+    def start_kafka_queue(self):
+        curl_node=list(self.masters)[0]
+        nbrokers = list(self.regions[0]).__len__()
+        general_util.replace_infile("fmone-resources/kafka.json", "fmone-resources/exec.json",
+                                    {"@nbrokers@": str(nbrokers)})
+        general_util.Put(hosts=curl_node,
+            local_files=["fmone-resources/exec.json"],
+            remote_location="/home/vagrant/exec.json").run()
+        p = general_util.SshProcess(
+            'curl -X POST "http://leader.mesos/service/marathon-user/v2/groups" -H "content-type: application/json" -d@/home/vagrant/exec.json',
+            host=curl_node).run()
+
+    def clean_marathon_groups(self):
+        curl_node = list(self.masters)[0]
+        p = general_util.SshProcess(
+            'curl -X DELETE "http://leader.mesos/service/marathon-user/v2/groups/" -H "content-type: application/json"',
+            host=curl_node).run()
+
 
 
 if __name__ == '__main__':
