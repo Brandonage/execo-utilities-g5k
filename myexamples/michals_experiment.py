@@ -14,10 +14,27 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 
 class MichalRcaVagrantExperiment(RcaVagrantExperiment):
+
+    def load_cassandra_database(self,cassandra_node):
+        general_util.Put(local_files=["aux_utilities/ycsb_init.cql"],
+                         hosts=cassandra_node).run()
+        general_util.Remote(
+            cmd="sudo docker run -v /home/vagrant:/home/vagrant cassandra:3.10 cqlsh -f /home/vagrant/ycsb_init.cql {0}".format(cassandra_node),
+            hosts=cassandra_node,
+            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
+        ).run()
+
+    def load_ycsb_cassandra(self,list_cassandra_nodes, workload):
+        general_util.Remote(
+            cmd='sudo docker run alvarobrandon/ycsb load cassandra-cql -P ycsb-0.12.0/workloads/{0} -p hosts="{1}" -p recordcount="100000000"'.format(workload,",".join(list_cassandra_nodes)),
+            hosts=list_cassandra_nodes[0],
+            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}
+        ).run()
+
     def save_results(self):
         logs_from_images = ['ches/kafka', 'alvarobrandon/spark-worker', 'alvarobrandon/spark-master',
                             'uhopper/hadoop-datanode:2.8.1', 'uhopper/hadoop-namenode:2.8.1', 'zookeeper',
-                            'mesosphere/marathon-lb:v1.11.1','alvarobrandon/spark-bench']
+                            'mesosphere/marathon-lb:v1.11.1','alvarobrandon/spark-bench','']
         # Extract here from the marathon API all the Mesos TaskIDs for the different applications
         for agent in self.private_agents:
             for image in logs_from_images:
@@ -94,4 +111,10 @@ if __name__ == 'main':
     testbed.kill_container_id('10.136.107.16', '045e1c812237')
     # KILL 2 HDFS DATANODES
     testbed.kill_container_id('10.136.107.14', 'e4fdb5918371')
+    testbed.cassandra_cluster_scenario(nnodes=3)
+    list_of_cassandra_nodes = ['1234','1231']
+    vagrantrca_deployment.load_cassandra_database('whatever cassandra node') # give format to the keyspace in cassadnra database
+    vagrantrca_deployment.load_ycsb_cassandra(list_of_cassandra_nodes,'workloada') # use ycsb to load the data into cassandra
+    testbed.ycsb_cassandra_client_scenario(3,list_of_cassandra_nodes,'workloada')
+
     vagrantrca_deployment.save_results()

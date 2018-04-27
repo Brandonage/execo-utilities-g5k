@@ -4,7 +4,11 @@ sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
 sys.path.extend(["/home/abrandon/execo-g5k-benchmarks"])
 from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment
 from time import sleep
-from aux_utilities.twilio_client import create_twilio_client
+from glob import glob
+import pandas as pd
+from sklearn import preprocessing
+
+
 
 
 
@@ -28,6 +32,7 @@ if __name__ == '__main__':
     vagrantdcos_deployment.install()
     # I build the regions and I leave an ncentral number of private node as the central region
     ncentral = 4
+    # [8,22,39,33]
     vagrantdcos_deployment.build_regions(proportions=[8,22,39,33], central_region=set(list(vagrantdcos_deployment.private_agents)[-ncentral:]))
     vagrantdcos_deployment.save_experiment(vagrantdcos_deployment)
     # Next, cassandra is going to be installed in the central region
@@ -38,17 +43,15 @@ if __name__ == '__main__':
                                 vagrantdcos_deployment.regions)
     nodes_to_install = set.union(*regions_to_install)
     vagrantdcos_deployment.ycsb_install_regions(nodes_to_install)
-    # Stop here. You have to install the Kafka queue. You can do so through the fmone-resources/kakfa.json file
-    vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
     workloads = ["workloada","workloadb","workloadc","workloadd","workloadf"]
-    vagrantdcos_deployment.start_dummy_containers()
-
     # We include here a comparison with Prometheus centralised approach
     vagrantdcos_deployment.start_cadvisor_containers()
     cadvisor_targets=map(lambda x : x + ':8082',list(vagrantdcos_deployment.nodes))
     vagrantdcos_deployment.start_prometheus_in_region(region=0,targets=cadvisor_targets,federated_targets=False)
     sleep(560)
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.start_dummy_containers()
+    vagrantdcos_deployment.add_delay(bandwidth="4Mbit",delay="50ms")
+    vagrantdcos_deployment.ycsb_run(iterations=1,res_dir="prometheus",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.stop_cadvisor_containers()
     vagrantdcos_deployment.stop_all_prometheus_instances()
     vagrantdcos_deployment.start_kafka_queue()
@@ -66,8 +69,9 @@ if __name__ == '__main__':
                                                   slaves=str(r.__len__()),
                                                   region=str(i))
         i=i+1
+
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=3,res_dir="regional",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.ycsb_run(iterations=1,res_dir="regional",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.clean_marathon_groups()
     sleep(360)
     vagrantdcos_deployment.start_dummy_containers()
@@ -77,11 +81,19 @@ if __name__ == '__main__':
                                                   slaves=str(r.__len__()),
                                                   region=str(i))
         i=i+1
+
+
     sleep(380)
-    vagrantdcos_deployment.ycsb_run(iterations=2,res_dir="aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
+    vagrantdcos_deployment.ycsb_run(iterations=1,res_dir="aggregate",workloads=workloads, recordcount="1000",threadcount="1", fieldlength="500", target="40")
     vagrantdcos_deployment.save_results()
     vagrantdcos_deployment.analyse_results(workloads)
 
+
+    # Check the resource usage of the backend. We can try different backends but for now lets try the MongoDB backend. It is very resource efficient or so we think
+
+    vagrantdcos_deployment.run_fmone_pipeline(pipeline_type="central_ycsb",
+                                              slaves=str(vagrantdcos_deployment.private_agents.__len__() - 1),
+                                              region="0")  # The region is not even used
 
 
     #check the elasticity of the containers. How fast can they start with and without pulling the images
@@ -102,6 +114,34 @@ if __name__ == '__main__':
         # The check resilience function checks how much time it takes to start again the pipeline given that one agent fails,
         # one mongoDB instance fails and that the whole pipeline fails
 
+
+    # Flexible backends and the resource usage.
+    # With this experiment we want to proof that different monitoring backends have different resource usage
+    # requirements. FMonE design is based on flexible backends, allowing the user to choose one depending on te capacity
+    # of the underlying hardware.
+
+    files_for_results = "/Users/alvarobrandon/execo_experiments/resource_usage_fmone/*.xls"
+    kafka_results = []
+    for f in glob(files_for_results):
+        df = pd.read_excel(f)
+        df[['usr', 'sys', 'idl']] = df[['usr', 'sys', 'idl']] / 1000
+        df['used'] = df['used']/100000000
+        if 'kafka' in f:
+            kafka_results.append(df)
+        if 'prom' in f:
+            prom = df
+        if 'mongodb' in f:
+            mongodb = df
+    kafka = pd.concat(kafka_results)
+    min_max_scaler = preprocessing.MinMaxScaler(feature_range=(0,100))
+    min_max_scaler.fit(kafka['writ'].append(mongodb['writ']).append(prom['writ']))
+    kafka['writ'] = min_max_scaler.transform(kafka['writ'])
+    mongodb['writ'] = min_max_scaler.transform(mongodb['writ'])
+    prom['writ'] = min_max_scaler.transform(prom['writ'])
+    print "cpu_usr\tcpu_usr_std\tused\tused_std\twrit\twrit_std\n{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n{6}\t{7}\t{8}\t{9}\t{10}\t{11}\n{12}\t{13}\t{14}\t{15}\t{16}\t{17}".\
+        format(kafka['usr'].mean(),kafka['usr'].std(),kafka['used'].mean(),kafka['used'].std(),kafka['writ'].mean(),kafka['writ'].std(),
+               prom['usr'].mean(),prom['usr'].std(),prom['used'].mean(),prom['used'].std(),prom['writ'].mean(),prom['writ'].std(),
+               mongodb['usr'].mean(),mongodb['usr'].std(),mongodb['used'].mean(),mongodb['used'].std(),mongodb['writ'].mean(),mongodb['writ'].std())
 
 
 # DESCRIPTION OF YCSB WORKLOADS #
