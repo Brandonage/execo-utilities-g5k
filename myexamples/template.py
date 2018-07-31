@@ -1,10 +1,12 @@
 ### THIS IS THE SCRIPT WE ARE GOING TO EXECUTE IN THE GRID5000 FRONTEND AND THE TEMPLATE FOR OUR EXPERIMENTS
 ### THIS SCRIPTS WILL BE PLACE INSIDE THE EXECO_UTILITIES_G5K root directory, possibly in a experiments folder and executed like py experiments/script.py
 import sys
+from os.path import expanduser
+home = expanduser("~")
 #   we add the paths in the frontend to be able to import SparkBench and the OARExperiment classes
 ## TODO: Add the paths in PYTHON environment variable so you can import directly.
-sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/spark"])
-sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
+sys.path.extend(["{0}/execo-g5k-benchmarks/spark"])
+sys.path.extend(["{0}/execo-utilities-g5k"])
 from spark.sparkbench import SparkBench
 from experiments.spark_oarexperiment import *
 
@@ -25,10 +27,9 @@ if __name__ == '__main__':
     date=None
     experiment_name="spark_benchmark_test"
     frontend="nancy"
-    description="We want to experiment with Mesos and the building a framework with it"
+    description="An example of a Spark deployment"
     spark_experiment = SparkExperimentTestBenchmark(frontend=frontend,resources=dict,walltime=walltime,
                             date=date,experiment_name=experiment_name,description=description,ndatanodes=3,nnodemanagers=2,colocated=True,os_memory=2)
-    # TODO: All of this instructions can be wrapped in a method like .start()
     spark_experiment.reserve_nodes()
     spark_experiment.deploy_nodes()
     spark_experiment.install()

@@ -1,7 +1,9 @@
 import sys
 # We extend the paths in case we want to upload the experiment to G5K frontend
-sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
-sys.path.extend(["/home/abrandon/execo-g5k-benchmarks"])
+from os.path import expanduser
+home = expanduser("~")
+sys.path.extend(["{0}/execo-utilities-g5k"])
+sys.path.extend(["{0}/execo-g5k-benchmarks"])
 from experiments.fmone_vagrantexperiment import FmoneVagrantExperiment
 from time import sleep
 from glob import glob

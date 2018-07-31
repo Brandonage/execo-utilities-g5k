@@ -1,6 +1,7 @@
 from utils import dcos_util, fmone_util, cassandra_util, general_util, monitoring_util
 from experiments.vagrantexperiment import VagrantExperiment
 from os.path import exists, expanduser
+home = expanduser("~")
 from os import makedirs
 from itertools import permutations
 import sys
@@ -14,7 +15,7 @@ from numpy import mean, std
 import pandas as pd
 # we need to extend the syspath so when we upload the experiment to G5K, it would be able
 # to import the YCSB benchmark
-sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/ycsb"])
+sys.path.extend(["{0}/execo-g5k-benchmarks/ycsb"])
 # This shows an error because it doesn't considers the sys.path.extend above
 # If we add it to Pycharm we have a problem with the common package which is the same for the benchmarks and the
 # execo utilities

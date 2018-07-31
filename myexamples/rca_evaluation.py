@@ -1,9 +1,10 @@
 import sys
 from execo import default_connection_params
 from os.path import expanduser
+home = expanduser("~")
 # We extend the paths in case we want to upload the experiment to G5K frontend
-sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
-sys.path.extend(["/home/abrandon/microservices-rca"])
+sys.path.extend(["{0}/execo-utilities-g5k"])
+sys.path.extend(["{0}/microservices-rca"])
 from experiments.rca_vagrantexperiment import RcaVagrantExperiment
 from microservices_rca import MicroServicesRCA
 import time

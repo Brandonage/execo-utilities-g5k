@@ -27,7 +27,7 @@ class RcaVagrantExperiment(VagrantExperiment):
         self.nmasters = nmasters
         self.npublic_agents = npublic_agents
         self.nprivate_agents = nprivate_agents
-        self.experiment_log  = pd.DataFrame(columns=["type","event","nodes","date_start","date_end","aditional_info"])
+        self.experiment_log  = pd.DataFrame(columns=["type","event","nodes","date_start","date_end","aditional_info","read_date"])
         general_util.default_connection_params['user'] = 'vagrant'
         general_util.default_connection_params['keyfile'] = expanduser("~") + "/.vagrant.d/insecure_private_key"
         dcos_util.default_connection_params['user'] = 'vagrant'

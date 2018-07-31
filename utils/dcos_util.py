@@ -56,10 +56,13 @@ def install_dcos(bootstrap,masters,public_agents,private_agents,dns_resolver):
         remote_location="/home/vagrant/genconf/ssh_key").run()
     # We now start the installation process
     # We put the generate_config.sh directly from our local directory to the bootstrap machine
-    Put(hosts=bootstrap,
-        local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
-        remote_location="/home/vagrant/dcos_generate_config.sh"
-        ).run()
+    # Put(hosts=bootstrap,
+    #     local_files=[expanduser("~") + "/vagrant-g5k/resources/dcos_generate_config.sh"],
+    #     remote_location="/home/vagrant/dcos_generate_config.sh"
+    #     ).run()
+    Remote("curl -O https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh",
+           hosts=bootstrap,
+           process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()
     Remote("sudo bash dcos_generate_config.sh --genconf",
            hosts=bootstrap,
            process_args={'stdout_handlers': [sys.stdout], 'stderr_handlers': [sys.stderr]}).run()

@@ -2,9 +2,10 @@
 ### THIS SCRIPTS WILL BE PLACE INSIDE THE EXECO_UTILITIES_G5K root directory, possibly in a experiments folder and executed like py experiments/script.py
 import sys
 #   we add the paths in the frontend to be able to import SparkBench and the OARExperiment classes
-## TODO: Add the paths in PYTHON environment variable so you can import directly.
-sys.path.extend(["/home/abrandon/execo-g5k-benchmarks/spark"])
-sys.path.extend(["/home/abrandon/execo-utilities-g5k"])
+from os.path import expanduser
+home = expanduser("~")
+sys.path.extend(["{0}/execo-g5k-benchmarks/spark"])
+sys.path.extend(["{0}/execo-utilities-g5k"])
 from spark.sparkbench import SparkBench
 from experiments.hdfs_oarexperiment import HdfsOARExperiment
 
